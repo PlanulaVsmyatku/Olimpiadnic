@@ -1,0 +1,198 @@
+﻿@{
+    ViewData["Title"] = "Регистрация";
+}
+@model RegisterViewModel
+
+<head>
+    <link rel="stylesheet" href="~/css/ImgWord.css" />
+</head>
+
+<body style="background-color: #f0f0f0;">
+
+    <main class="container mt-4 mb-4" aria-labelledby="registerHeading">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-7">
+            
+            <article aria-label="Форма регистрации на олимпиаду">
+                <section class="card shadow border-0 rounded-4 mb-4 mt-3">
+                    <div class="card-body p-4 p-md-5">
+                        
+                        <header class="text-center mb-4">
+                            <h1 id="registerHeading" class="h2">Регистрация участника</h1>
+                            <p class="text-secondary">Заполните все обязательные поля</p>
+                        </header>
+
+                        <form asp-action="Register" 
+                              asp-controller="Account" 
+                              method="post" 
+                              enctype="multipart/form-data"
+                              novalidate>
+
+                                <!-- Общие ошибки модели -->
+                                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                                <!-- Логин -->
+                                <div class="mb-3">
+                                    <label asp-for="Login" class="form-label fw-semibold"></label>
+                                    <input asp-for="Login" class="form-control" placeholder="Введите логин">
+                                    <span asp-validation-for="Login" class="text-danger"></span>
+                                    <div class="form-text">Логин должен содержать от 3 до 20 символов</div>
+                                </div>
+
+                                <!-- Пароль -->
+                                <div class="mb-3">
+                                    <label asp-for="Password" class="form-label fw-semibold"></label>
+                                    <input asp-for="Password" class="form-control" type="password" id="password" placeholder="Введите пароль">
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" id="showPasswordCheckbox">
+                                        <label class="form-check-label" for="showPasswordCheckbox">
+                                            Показать пароль
+                                        </label>
+                                    </div>
+                                    <span asp-validation-for="Password" class="text-danger"></span>
+                                </div>
+
+                                <!-- Подтверждение пароля -->
+                                <div class="mb-4">
+                                    <label asp-for="ConfirmPassword" class="form-label fw-semibold"></label>
+                                    <input asp-for="ConfirmPassword" class="form-control" type="password" id="confirmPassword" placeholder="Повторите пароль">
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" id="showConfirmPasswordCheckbox">
+                                        <label class="form-check-label" for="showConfirmPasswordCheckbox">
+                                            Показать пароль
+                                        </label>
+                                    </div>
+                                    <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                                </div>
+
+                                <!-- ФИО -->
+                                <div class="mb-3">
+                                    <label asp-for="FullName" class="form-label fw-semibold"></label>
+                                    <input asp-for="FullName" class="form-control" placeholder="Иванов Иван Иванович">
+                                    <span asp-validation-for="FullName" class="text-danger"></span>
+                                </div>
+
+                                <!-- Почта -->
+                                <div class="mb-3">
+                                    <label asp-for="Email" class="form-label fw-semibold"></label>
+                                    <input asp-for="Email" class="form-control" placeholder="ivanov@example.com">
+                                    <span asp-validation-for="Email" class="text-danger"></span>
+                                </div>
+
+                                <!-- Город -->
+                                <div class="mb-3">
+                                    <label asp-for="City" class="form-label fw-semibold"></label>
+                                    <input asp-for="City" class="form-control" placeholder="Москва">
+                                    <span asp-validation-for="City" class="text-danger"></span>
+                                </div>
+
+                                <!-- Уровень образования (выпадающий список) -->
+                                <div class="mb-3">
+                                    <label asp-for="EducationLevel" class="form-label fw-semibold"></label>
+                                    <select asp-for="EducationLevel" class="form-select">
+                                        <option value="">-- Выберите уровень --</option>
+                                        <option value="Высшее">Высшее</option>
+                                        <option value="СПО">СПО</option>
+                                        <option value="Школа">Школа</option>
+                                    </select>
+                                    <span asp-validation-for="EducationLevel" class="text-danger"></span>
+                                </div>
+
+                                <!-- Учебное заведение (поле с подстановкой / datalist) -->
+                                <div class="mb-3">
+                                    <label asp-for="EducationalInstitution" class="form-label fw-semibold"></label>
+                                    <input asp-for="EducationalInstitution"
+                                           class="form-control"
+                                           list="institutionsList"
+                                           placeholder="Введите или выберите учебное заведение">
+                                    <datalist id="institutionsList">
+                                        <option value="МГУ имени М.В. Ломоносова"></option>
+                                        <option value="СПбГУ"></option>
+                                        <option value="НИУ ВШЭ"></option>
+                                        <option value="КузГТУ"></option>
+                                        <option value="КузТАГИС"></option>
+                                    </datalist>
+                                    <span asp-validation-for="EducationalInstitution" class="text-danger"></span>
+                                    <div class="form-text">Можно ввести своё значение или выбрать из списка</div>
+                                </div>
+
+                                <!-- Куратор -->
+                                <div class="mb-3">
+                                    <label asp-for="Curator" class="form-label fw-semibold"></label>
+                                    <input asp-for="Curator" class="form-control" placeholder="Петрова Анна Сергеевна">
+                                    <span asp-validation-for="Curator" class="text-danger"></span>
+                                    <div class="form-text">ФИО контактного лица от учебного заведения</div>
+                                </div>
+
+                                <!-- Скан согласия на обработку персональных данных -->
+                                <div class="mb-4">
+                                    <label asp-for="ConsentFile" class="form-label fw-semibold"></label>
+                                    <input asp-for="ConsentFile"
+                                           class="form-control"
+                                           type="file"
+                                           accept=".pdf,.jpg,.jpeg,.png">
+                                    <span asp-validation-for="ConsentFile" class="text-danger"></span>
+                                    <div class="form-text">Загрузите скан подписанного согласия (PDF, JPG, PNG до 5 МБ)</div>
+                                </div>
+
+                                <!-- Кнопка отправки -->
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        Зарегистрироваться
+                                    </button>
+                                </div>
+                        </form>
+
+                        <footer class="text-center mt-4">
+                            <small class="text-muted">
+                                Нажимая «Зарегистрироваться», вы даёте согласие на обработку персональных данных.
+                            </small>
+                        </footer>
+
+                    </div>
+                </section>
+            </article>
+
+        </div>
+    </div>
+</main>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+        <script>
+                // Дополнительная клиентская валидация (например, размер файла)
+                document.querySelector('form').addEventListener('submit', function(e) {
+                    const fileInput = document.querySelector('#ConsentFile');
+                    if (fileInput.files.length > 0) {
+                        const fileSize = fileInput.files[0].size / 1024 / 1024; // в МБ
+                        if (fileSize > 5) {
+                            alert('Размер файла не должен превышать 5 МБ');
+                            e.preventDefault();
+                        }
+                    }
+                });
+        </script>
+
+        <script>
+                // Показ/скрытие пароля
+                const showPasswordCheckbox = document.getElementById('showPasswordCheckbox');
+                const passwordInput = document.getElementById('password');
+    
+                showPasswordCheckbox.addEventListener('change', function() {
+                    passwordInput.type = this.checked ? 'text' : 'password';
+                });
+    
+                // Показ/скрытие подтверждения пароля
+                const showConfirmCheckbox = document.getElementById('showConfirmPasswordCheckbox');
+                const confirmInput = document.getElementById('confirmPassword');
+    
+                showConfirmCheckbox.addEventListener('change', function() {
+                    confirmInput.type = this.checked ? 'text' : 'password';
+                });
+        </script>
+
+}
+
+</body>

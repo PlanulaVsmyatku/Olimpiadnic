@@ -1,0 +1,77 @@
+﻿@{
+    ViewData["Title"] = "Доступ запрещён";
+    var returnUrl = ViewData["ReturnUrl"] as string;
+}
+
+<main class="container mt-5" aria-labelledby="denied-heading">
+    <section class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            
+            <article class="card shadow border-0 rounded-4 text-center">
+                <div class="card-body p-4 p-md-5">
+                    
+                    <header class="mb-4">
+                        <!-- Иконка запрета -->
+                        <figure class="mb-3">
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" role="img" aria-label="Доступ запрещён">
+                                <circle cx="12" cy="12" r="10" stroke="#dc3545" />
+                                <line x1="18" y1="6" x2="6" y2="18" stroke="#dc3545" stroke-linecap="round" />
+                                <line x1="12" y1="8" x2="12" y2="12" stroke="#dc3545" stroke-linecap="round" />
+                                <circle cx="12" cy="16" r="0.5" fill="#dc3545" stroke="#dc3545" />
+                                <title>Запрещено</title>
+                            </svg>
+                            <figcaption class="visually-hidden">Иконка запрета доступа</figcaption>
+                        </figure>
+                        
+                        <h1 id="denied-heading" class="h2 text-danger">Доступ запрещён</h1>
+                        <p class="text-muted mt-2">
+                            У вас недостаточно прав для просмотра этой страницы
+                        </p>
+                    </header>
+                    
+                    <section class="my-4">
+                        <div class="alert alert-warning" role="alert">
+                            <p class="mb-0">
+                                <strong>⚠️ Ошибка 403</strong> — доступ к запрошенному ресурсу ограничен.
+                            </p>
+                        </div>
+                        
+                        <ul class="list-unstyled text-start mt-4">
+                            <li class="mb-2">
+                                <span class="text-muted">🔒</span>
+                                Возможно, вам нужно <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@returnUrl">войти в систему</a> под другой учётной записью
+                            </li>
+                            <li class="mb-2">
+                                <span class="text-muted">👤</span>
+                                Ваша роль не имеет доступа к этой странице
+                            </li>
+                            <li class="mb-2">
+                                <span class="text-muted">📧</span>
+                                Если вы считаете, что это ошибка, <a href="/contact">свяжитесь с администратором</a>
+                            </li>
+                        </ul>
+                    </section>
+                    
+                    <footer class="mt-4">
+                        <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
+                            <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                                ← Вернуться назад
+                            </a>
+                            <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
+                                На главную
+                            </a>
+                            @if (!User.Identity.IsAuthenticated)
+                            {
+                                <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@returnUrl" class="btn btn-success">
+                                    Войти в систему
+                                </a>
+                            }
+                        </div>
+                    </footer>
+                    
+                </div>
+            </article>
+            
+        </div>
+    </section>
+</main>

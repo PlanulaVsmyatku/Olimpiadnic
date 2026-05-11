@@ -1,0 +1,40 @@
+﻿@{
+    ViewData["Title"] = "Регистрация завершена";
+}
+
+<main class="container mt-5">
+    <section class="row justify-content-center">
+        <div class="col-md-6">
+            
+            <article class="card shadow-sm border-success">
+                <div class="card-body p-5">
+                    
+                    <header class="text-center mb-4">
+                        <figure class="mb-3">
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="green" stroke-width="1.5" role="img" aria-label="Иконка успеха">
+                                <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-linecap="round" />
+                                <title>Успешно</title>
+                            </svg>
+                        </figure>
+                        
+                        <h1 class="h3">Регистрация успешно завершена!</h1>
+                    </header>
+                    
+                    <section class="text-center">
+                        <p class="mb-3">
+                            Вы получите уведомление на email после проверки документов.
+                        </p>
+                        
+                        <footer class="mt-4">
+                            <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
+                                На главную
+                            </a>
+                        </footer>
+                    </section>
+                    
+                </div>
+            </article>
+            
+        </div>
+    </section>
+</main>

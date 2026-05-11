@@ -1,0 +1,34 @@
+﻿/*Мои стили*/
+
+/* Стиль для иконки внутри navbar-brand */
+.brand-icon {
+    height: 1.2em; /* размер как у буквы */
+    width: auto;
+    display: inline-block;
+    margin-right: 5px; /* отступ от текста */
+    vertical-align: middle; /* выравнивание по середине */
+}
+
+/* Дополнительно: чтобы весь блок не разъезжался */
+.navbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.icon-word {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.icon-word img {
+    height: 1em;
+    width: auto;
+}
+
+/* Можно добавить любые другие стили */
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
