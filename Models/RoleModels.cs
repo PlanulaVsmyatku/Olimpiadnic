@@ -155,17 +155,17 @@ namespace Olimpiadnic.Models
         [Required(ErrorMessage = "Введите логин")]
         [Display(Name = "Логин")]
         [StringLength(20, MinimumLength = 3, ErrorMessage = "Логин должен быть от 3 до 20 символов")]
-        public required string Login { get; set; }
+        public string? Login { get; set; }
 
         [Required(ErrorMessage = "Введите полное имя")]
         [Display(Name = "Полное имя")]
         [StringLength(200, MinimumLength = 5, ErrorMessage = "ФИО должно содержать от 5 до 200 символов")]
-        public required string FullName { get; set; }
+        public string? FullName { get; set; }
 
         [Required(ErrorMessage = "Введите email")]
         [EmailAddress(ErrorMessage = "Некорректный формат email")]
         [Display(Name = "Электронная почта")]
-        public required string Email { get; set; }
+        public string? Email { get; set; }
 
         [Display(Name = "Номер телефона")]
         [Phone(ErrorMessage = "Некорректный формат телефона")]
@@ -182,7 +182,7 @@ namespace Olimpiadnic.Models
 
         [Required(ErrorMessage = "Выберите роль")]
         [Display(Name = "Роль")]
-        public required string Role { get; set; }
+        public string? Role { get; set; }
 
         [Display(Name = "Активен")]
         public bool IsActive { get; set; }

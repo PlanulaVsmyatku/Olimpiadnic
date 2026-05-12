@@ -66,6 +66,20 @@
                                     </a>
                                 </li>
                             }
+                            
+                            @if (User.IsInRole("Администратор"))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="Dashboard" asp-action="Statistics">
+                                        <i class="fas fa-chart-line me-1"></i>Статистика
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="Dashboard" asp-action="AllUsers">
+                                        <i class="fas fa-users me-1"></i>Профили пользователей
+                                    </a>
+                                </li>
+                            }
                         }
                     </ul>
 
@@ -111,15 +125,14 @@
     </header>
 
     <main style="margin-top: 76px;">
-        <div class="container-fluid px-4 pb-5">
-            <!-- Добавлен pb-5 (padding-bottom) -->
+        <div class="container-fluid px-4 content-wrapper pb-5 ">
             @RenderBody()
         </div>
     </main>
 
-    <footer class="border-top footer text-muted bg-white">
-        <div class="container">
-            &copy; 2026 - Олимпиадник - <a asp-controller="Home" asp-action="Privacy">Privacy</a>
+    <footer class="border-top footer text-muted bg-white mt-5">
+        <div class="container py-3">
+            &copy; 2026 - Олимпиадник - <a asp-controller="Home" asp-action="Privacy">Политика конфиденциальности</a>
         </div>
     </footer>
 

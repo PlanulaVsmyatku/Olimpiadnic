@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Olimpiadnic.Models;
 using Olimpiadnic.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,6 +22,14 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.HttpOnly = true;                    // Защита от XSS
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Только HTTPS
     });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("StaffOnly", policy =>
+        policy.RequireRole(UserRoles.Staff, UserRoles.Admin));
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireRole(UserRoles.Admin));
+});
 
 var app = builder.Build();
 

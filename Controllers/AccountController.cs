@@ -39,6 +39,7 @@ namespace Olimpiadnic.Controllers
             public required string Email { get; set; }
             public required string FullName { get; set; }
             public required string EducationLevel { get; set; }
+            public required string Role { get; set; }
         }
 
         #region Форма входа
@@ -139,15 +140,40 @@ namespace Olimpiadnic.Controllers
             // 3. Вернуть пользователя или null
 
             // Временная заглушка для тестирования
-            if (loginOrEmail == "admin@example.com" && password == "123456")
+            // Тестовые учётные данные
+            var testUsers = new List<(string LoginOrEmail, string Password, int Id, string Login, string Email, string FullName, string Role)>
+            {
+                // Администратор
+                ("admin@example.com", "123456", 1, "admin", "admin@example.com", "Администратор Системы", UserRoles.Admin),
+                ("admin", "123456", 1, "admin", "admin@example.com", "Администратор Системы", UserRoles.Admin),
+        
+                // Сотрудник
+                ("staff@example.com", "123456", 2, "petrov_teacher", "staff@example.com", "Петров Пётр Петрович", UserRoles.Staff),
+                ("petrov_teacher", "123456", 2, "petrov_teacher", "staff@example.com", "Петров Пётр Петрович", UserRoles.Staff),
+        
+                // Участник 1
+                ("ivanov_ivan", "123456", 3, "ivanov_ivan", "ivanov@student.ru", "Иванов Иван Иванович", UserRoles.Participant),
+                ("ivanov@student.ru", "123456", 3, "ivanov_ivan", "ivanov@student.ru", "Иванов Иван Иванович", UserRoles.Participant),
+        
+                // Участник 2
+                ("sidorova_maria", "123456", 4, "sidorova_maria", "sidorova@student.ru", "Сидорова Мария Сергеевна", UserRoles.Participant),
+                ("sidorova@student.ru", "123456", 4, "sidorova_maria", "sidorova@student.ru", "Сидорова Мария Сергеевна", UserRoles.Participant),
+            };
+
+            var user = testUsers.FirstOrDefault(u =>
+                u.LoginOrEmail.Equals(loginOrEmail, StringComparison.OrdinalIgnoreCase) &&
+                u.Password == password);
+
+            if (user != default)
             {
                 return new UserDto
                 {
-                    Id = 1,
-                    Login = "admin",
-                    Email = "admin@example.com",
-                    FullName = "Администратор",
-                    EducationLevel = "Высшее"
+                    Id = user.Id,
+                    Login = user.Login,
+                    Email = user.Email,
+                    FullName = user.FullName,
+                    EducationLevel = user.Role == UserRoles.Participant ? "Высшее" : "",
+                    Role = user.Role  
                 };
             }
 
