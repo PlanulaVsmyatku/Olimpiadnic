@@ -116,6 +116,7 @@ namespace Olimpiadnic.Controllers
 
         // GET: /Account/Logout
         [HttpGet]
+        [Authorize]
         public async Task<IActionResult> Logout()
         {
             // Выход из системы

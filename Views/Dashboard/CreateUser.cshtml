@@ -1,0 +1,112 @@
+@using Olimpiadnic.Models
+@model EditUserByAdminViewModel
+
+@{
+    ViewData["Title"] = "Создание пользователя";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .create-user-form {
+            max-width: 700px;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .password-info {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+
+<h2 class="mb-4">
+    <i class="fas fa-user-plus me-2"></i>Создание пользователя
+    <small class="text-muted fs-6">Добавление нового пользователя в систему</small>
+</h2>
+
+<div class="create-user-form">
+    <form asp-action="CreateUser" method="post">
+        @Html.AntiForgeryToken()
+        
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+        
+        <div class="form-group">
+            <label asp-for="Login" class="form-label fw-semibold"></label>
+            <input asp-for="Login" class="form-control" />
+            <span asp-validation-for="Login" class="text-danger"></span>
+        </div>
+        
+        <div class="form-group">
+            <label asp-for="FullName" class="form-label fw-semibold"></label>
+            <input asp-for="FullName" class="form-control" />
+            <span asp-validation-for="FullName" class="text-danger"></span>
+        </div>
+        
+        <div class="form-group">
+            <label asp-for="Email" class="form-label fw-semibold"></label>
+            <input asp-for="Email" class="form-control" />
+            <span asp-validation-for="Email" class="text-danger"></span>
+        </div>
+        
+        <div class="form-group">
+            <label asp-for="PhoneNumber" class="form-label fw-semibold"></label>
+            <input asp-for="PhoneNumber" class="form-control" />
+        </div>
+        
+        <div class="form-group">
+            <label asp-for="EducationalInstitution" class="form-label fw-semibold"></label>
+            <input asp-for="EducationalInstitution" class="form-control" />
+        </div>
+        
+        <div class="form-group">
+            <label asp-for="EducationLevel" class="form-label fw-semibold"></label>
+            <input asp-for="EducationLevel" class="form-control" />
+        </div>
+        
+        <div class="form-group">
+            <label asp-for="Position" class="form-label fw-semibold"></label>
+            <input asp-for="Position" class="form-control" />
+        </div>
+        
+        <div class="form-group">
+            <label asp-for="Role" class="form-label fw-semibold"></label>
+            <select asp-for="Role" class="form-select" asp-items="@(new SelectList(Model.AvailableRoles))"></select>
+            <span asp-validation-for="Role" class="text-danger"></span>
+        </div>
+        
+        <div class="form-group form-check">
+            <input asp-for="IsActive" class="form-check-input" />
+            <label asp-for="IsActive" class="form-check-label"></label>
+        </div>
+        
+        <div class="password-info mb-3">
+            <i class="fas fa-info-circle me-2"></i>
+            Пользователь получит email с приглашением для создания пароля
+        </div>
+        
+        <div class="form-group mt-4">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>Создать
+            </button>
+            <a href="/Dashboard/AllUsers" class="btn btn-secondary ms-2">
+                <i class="fas fa-arrow-left me-2"></i>Отмена
+            </a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}
+
+</body>
+</html>

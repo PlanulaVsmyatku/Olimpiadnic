@@ -33,6 +33,10 @@ namespace Olimpiadnic.Models.HomeModels
 
         [Display(Name = "Статус")]
         public required string Status { get; set; }
+
+        [Display(Name = "Пользователь уже записан")]
+        public bool IsUserRegistered { get; set; } = false;
+
     }
 
 }

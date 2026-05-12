@@ -1,0 +1,165 @@
+@using Olimpiadnic.Models
+@model UserProfileViewModel
+
+@{
+    ViewData["Title"] = "Личный кабинет";
+    var role = ViewBag.UserRole as string ?? "Участник";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="~/css/DashBoardStyles.css" />
+</head>
+<body>
+
+<div class="dashboard-container">
+    <!-- Вертикальная навигация -->
+    <aside class="dashboard-sidebar">
+        <nav class="nav flex-column">
+            <!-- Профиль (общий для всех) -->
+            <a class="nav-link active" id="profile-tab" href="/Dashboard/Profile">
+                <i class="fas fa-user-circle"></i> Профиль
+            </a>
+            
+            @if (role == "Участник")
+            {
+                <a class="nav-link" id="my-olympiads-tab" href="/Dashboard/MyOlympiads">
+                    <i class="fas fa-trophy"></i> Мои олимпиады
+                </a>
+                <a class="nav-link" id="completed-tab" href="/Dashboard/CompletedOlympiads">
+                    <i class="fas fa-check-circle"></i> Пройденные олимпиады
+                </a>
+                <a class="nav-link" id="edit-profile-tab" href="/Dashboard/EditProfile">
+                    <i class="fas fa-edit"></i> Редактировать профиль
+                </a>
+                <div class="mt-3 px-3">
+                    <div class="status-badge @(Model.IsActive ? "status-active" : "status-inactive")">
+                        <i class="fas @(Model.IsActive ? "fa-check-circle" : "fa-clock") me-1"></i>
+                        Статус: @(Model.IsActive ? "Активирован" : "Ожидает активации")
+                    </div>
+                </div>
+            }
+            else if (role == "Сотрудник")
+            {
+                <a class="nav-link" id="my-olympiads-tab" href="/Dashboard/MyOlympiads">
+                    <i class="fas fa-list-alt"></i> Мои олимпиады
+                </a>
+                <a class="nav-link" id="edit-profile-tab" href="/Dashboard/EditProfile">
+                    <i class="fas fa-edit"></i> Редактировать профиль
+                </a>
+                <a class="nav-link" id="create-olympiad-tab" href="/Olympiad/Create">
+                    <i class="fas fa-plus-circle"></i> Создать олимпиаду
+                </a>
+                <div class="mt-3 px-3">
+                    <div class="status-badge @(Model.IsActive ? "status-active" : "status-inactive")">
+                        <i class="fas @(Model.IsActive ? "fa-check-circle" : "fa-clock") me-1"></i>
+                        Статус: @(Model.IsActive ? "Активирован" : "Ожидает активации")
+                    </div>
+                </div>
+            }
+            else if (role == "Администратор")
+            {
+                <a class="nav-link" id="my-olympiads-tab" href="/Dashboard/MyOlympiads">
+                    <i class="fas fa-list-alt"></i> Мои олимпиады
+                </a>
+                <a class="nav-link" id="edit-profile-tab" href="/Dashboard/EditProfile">
+                    <i class="fas fa-edit"></i> Редактировать профиль
+                </a>
+                <a class="nav-link" id="create-olympiad-tab" href="/Olympiad/Create">
+                    <i class="fas fa-plus-circle"></i> Создать олимпиаду
+                </a>
+                <a class="nav-link" id="statistics-tab" href="/Dashboard/Statistics">
+                    <i class="fas fa-chart-line"></i> Статистика
+                </a>
+                <a class="nav-link" id="all-users-tab" href="/Dashboard/AllUsers">
+                    <i class="fas fa-users"></i> Профили пользователей
+                </a>
+                <a class="nav-link" id="all-olympiads-tab" href="/Dashboard/AllOlympiads">
+                    <i class="fas fa-globe"></i> Все олимпиады
+                </a>
+                <div class="mt-3 px-3">
+                    <div class="status-badge @(Model.IsActive ? "status-active" : "status-inactive")">
+                        <i class="fas @(Model.IsActive ? "fa-check-circle" : "fa-clock") me-1"></i>
+                        Статус: @(Model.IsActive ? "Активирован" : "Ожидает активации")
+                    </div>
+                </div>
+            }
+        </nav>
+    </aside>
+
+    <!-- Основной контент (Профиль по умолчанию) -->
+    <main class="dashboard-content" id="dashboardContent">
+        <div id="profile-content">
+            <h2 class="mb-4">
+                <i class="fas fa-user-circle me-2"></i>Профиль пользователя
+                @if (role == "Администратор")
+                {
+                    <span class="badge bg-danger ms-2">Администратор</span>
+                }
+                else if (role == "Сотрудник")
+                {
+                    <span class="badge bg-primary ms-2">Сотрудник</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary ms-2">Участник</span>
+                }
+            </h2>
+            
+            <div class="info-row">
+                <div class="info-label"><i class="fas fa-user me-2"></i> @Html.DisplayNameFor(m => m.Login)</div>
+                <div class="info-value">@Model.Login</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label"><i class="fas fa-signature me-2"></i> @Html.DisplayNameFor(m => m.FullName)</div>
+                <div class="info-value">@Model.FullName</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label"><i class="fas fa-envelope me-2"></i> @Html.DisplayNameFor(m => m.Email)</div>
+                <div class="info-value">@Model.Email</div>
+            </div>
+            @if (!string.IsNullOrEmpty(Model.PhoneNumber))
+            {
+                <div class="info-row">
+                    <div class="info-label"><i class="fas fa-phone me-2"></i> @Html.DisplayNameFor(m => m.PhoneNumber)</div>
+                    <div class="info-value">@Model.PhoneNumber</div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.EducationalInstitution))
+            {
+                <div class="info-row">
+                    <div class="info-label"><i class="fas fa-university me-2"></i> @Html.DisplayNameFor(m => m.EducationalInstitution)</div>
+                    <div class="info-value">@Model.EducationalInstitution</div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.EducationLevel))
+            {
+                <div class="info-row">
+                    <div class="info-label"><i class="fas fa-graduation-cap me-2"></i> @Html.DisplayNameFor(m => m.EducationLevel)</div>
+                    <div class="info-value">@Model.EducationLevel</div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.Position))
+            {
+                <div class="info-row">
+                    <div class="info-label"><i class="fas fa-briefcase me-2"></i> @Html.DisplayNameFor(m => m.Position)</div>
+                    <div class="info-value">@Model.Position</div>
+                </div>
+            }
+        </div>
+    </main>
+</div>
+
+<script>
+    // Активная ссылка в вертикальном меню
+    document.querySelectorAll('.dashboard-sidebar .nav-link').forEach(link => {
+        if (window.location.pathname.includes(link.getAttribute('href'))) {
+            document.querySelectorAll('.dashboard-sidebar .nav-link').forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+        }
+    });
+</script>
+
+</body>
+</html>

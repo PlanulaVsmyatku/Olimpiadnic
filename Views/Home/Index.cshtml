@@ -19,39 +19,6 @@
 </head>
 
 <body style="background-color: #f0f0f0;">
-    <!-- Header -->
-    <header>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-            <div class="container">
-                <a class="navbar-brand" href="/">
-                    <i class="fas fa-trophy me-2"></i>
-                    Олимпиады Онлайн
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav ms-auto">
-                        <li class="nav-item">
-                            <a class="nav-link active" href="/">Главная</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">Все олимпиады</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">Мои олимпиады</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#">
-                                <i class="fas fa-user"></i> Войти
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
-
     <main>
         <!-- Добро пожаловать -->
         <section class="hero-section text-center">
@@ -65,7 +32,7 @@
                 {
                     <div class="mt-4">
                         <a asp-controller="Account" asp-action="Register" class="btn btn-light btn-lg me-3">
-                            <i class="fas fa-user-plus me-2"></i>Зарегестрироваться сейчас
+                            <i class="fas fa-user-plus me-2"></i>Начать сейчас
                         </a>
                         <a href="#olympiads" class="btn btn-outline-light btn-lg">
                             <i class="fas fa-search me-2"></i>Смотреть олимпиады
@@ -76,7 +43,7 @@
         </section>
 
         <div class="container">
-            <!-- Секция поиска -->
+            <!-- Поисковая секция -->
             <section class="search-card" aria-label="Поиск олимпиад">
                 <h3 class="mb-4">
                     <i class="fas fa-search me-2" style="color: #667eea;"></i>
@@ -167,8 +134,8 @@
                 </form>
             </section>
 
-            <!-- Массив карточке олимпиад -->
-            <section id="olympiads" aria-label="Список олимпиад">
+            <!-- Массив карточек олимпиад -->
+            <section id="olympiads" aria-label="Список олимпиад" class="mb-4">
                 @if (Model.HasResults)
                 {
                     <div class="row g-4">
@@ -217,19 +184,29 @@
                                             <div class="d-grid gap-2">
                                                 @{
                                                     var now = DateTime.Now;
+                                                    
                                                     if (now >= olympiad.RegistOpen && now <= olympiad.RegistClosed)
                                                     {
                                                         if (isAuthenticated)
                                                         {
-                                                            <button class="btn-register"
-                                                                    onclick="location.href='/Olympiad/Register/@olympiad.OlympiadId'">
-                                                                <i class="fas fa-pen-alt me-2"></i>Записаться
-                                                            </button>
+                                                            if (!olympiad.IsUserRegistered)
+                                                            {
+                                                                <button class="btn-register"
+                                                                        onclick="registerForOlympiad(@olympiad.OlympiadId, this)">
+                                                                    <i class="fas fa-pen-alt me-2"></i>Записаться
+                                                                </button>
+                                                            }
+                                                            else
+                                                            {
+                                                                <button class="btn-outline-register" disabled>
+                                                                    <i class="fas fa-check me-2"></i>Вы уже записаны
+                                                                </button>
+                                                            }
                                                         }
                                                         else
                                                         {
                                                             <button class="btn-register"
-                                                                    onclick="location.href='/Account/Login?returnUrl=/Olympiad/Register/@olympiad.OlympiadId'">
+                                                                    onclick="location.href='/Account/Login?returnUrl=@Context.Request.Path'">
                                                                 <i class="fas fa-sign-in-alt me-2"></i>Войдите для записи
                                                             </button>
                                                         }
@@ -238,7 +215,7 @@
                                                     {
                                                         <button class="btn-outline-register" disabled>
                                                             <i class="fas fa-clock me-2"></i>
-                                                            Регистрация с @olympiad.RegistOpen.ToString("dd.MM")
+                                                            Регистрация с @olympiad.RegistOpen.ToString("dd.MM.yyyy")
                                                         </button>
                                                     }
                                                     else
@@ -270,7 +247,132 @@
             </section>
         </div>
     </main>
+
+    <!-- Anti-Forgery Token для AJAX запросов -->
+    @{
+        var antiforgeryToken = Context.Items["AntiforgeryToken"] as string ?? "";
+    }
+    <input type="hidden" id="antiforgeryToken" value="@antiforgeryToken" />
+
+    <script>
+            // Функция для отображения toast уведомлений
+            function showToast(title, message, type) {
+                var toastContainer = document.getElementById('toastContainer');
+                if (!toastContainer) {
+                    toastContainer = document.createElement('div');
+                    toastContainer.id = 'toastContainer';
+                    toastContainer.className = 'toast-notification';
+                    document.body.appendChild(toastContainer);
+                }
+            
+                var toast = document.createElement('div');
+                toast.className = 'toast show';
+                toast.setAttribute('role', 'alert');
+                toast.setAttribute('aria-live', 'assertive');
+                toast.setAttribute('aria-atomic', 'true');
+            
+                var bgColor = type === 'success' ? '#d4edda' : '#f8d7da';
+                var textColor = type === 'success' ? '#155724' : '#721c24';
+                var icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle';
+            
+                toast.style.backgroundColor = bgColor;
+                toast.style.color = textColor;
+                toast.style.borderRadius = '8px';
+                toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                toast.style.marginBottom = '10px';
+            
+                toast.innerHTML = `
+                    <div class="toast-header" style="background-color: ${bgColor}; color: ${textColor}; border-bottom: 1px solid ${type === 'success' ? '#c3e6cb' : '#f5c6cb'}">
+                        <i class="fas ${icon} me-2"></i>
+                        <strong class="me-auto">${title}</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Закрыть"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                `;
+            
+                toastContainer.appendChild(toast);
+            
+                var bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+                bsToast.show();
+            
+                toast.addEventListener('hidden.bs.toast', function () {
+                    toast.remove();
+                });
+            }
+        
+            // Функция для получения AntiForgeryToken
+            function getAntiForgeryToken() {
+                return document.getElementById('antiforgeryToken')?.value || '';
+            }
+        
+            // Функция записи на олимпиаду
+            function registerForOlympiad(olympiadId, buttonElement) {
+                // Сохраняем оригинальный текст
+                var originalText = buttonElement.innerHTML;
+            
+                // Показываем индикатор загрузки
+                buttonElement.disabled = true;
+                buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Запись...';
+            
+                // Отправляем AJAX запрос
+                fetch('/Home/RegisterForOlympiad', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': getAntiForgeryToken()
+                    },
+                    body: JSON.stringify({ olympiadId: olympiadId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Успешная запись
+                        showToast('Успешно!', data.message || 'Вы успешно записаны на олимпиаду!', 'success');
+                    
+                        // Меняем состояние кнопки
+                        buttonElement.innerHTML = '<i class="fas fa-check me-2"></i>Вы записаны';
+                        buttonElement.classList.remove('btn-register');
+                        buttonElement.classList.add('btn-outline-register');
+                    
+                        // Перезагружаем страницу через 1.5 секунды для обновления состояния
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1500);
+                    } else if (data.requiresLogin) {
+                        // Требуется авторизация
+                        window.location.href = '/Account/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
+                    } else {
+                        // Ошибка
+                        showToast('Ошибка!', data.message || 'Произошла ошибка при записи', 'error');
+                        buttonElement.disabled = false;
+                        buttonElement.innerHTML = originalText;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Ошибка!', 'Произошла ошибка при записи. Попробуйте позже.', 'error');
+                    buttonElement.disabled = false;
+                    buttonElement.innerHTML = originalText;
+                });
+            }
+        
+            // Получаем AntiForgeryToken при загрузке страницы
+            fetch('/Home/GetAntiForgeryToken')
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.token) {
+                        var tokenInput = document.getElementById('antiforgeryToken');
+                        if (tokenInput) {
+                            tokenInput.value = data.token;
+                        }
+                    }
+                })
+                .catch(error => console.error('Error getting token:', error));
+    </script>
 </body>
+
 
 @functions {
     public string GetStatusColor(string status)
