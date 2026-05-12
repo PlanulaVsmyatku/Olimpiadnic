@@ -15,7 +15,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.LoginPath = "/Account/Login";        // Путь к странице входа
         options.LogoutPath = "/Account/Logout";      // Путь к выходу
-        options.AccessDeniedPath = "/Home/AccessDenied"; // Страница отказа в доступе
+        options.AccessDeniedPath = "/Shared/AccessDenied"; // Страница отказа в доступе
         options.ExpireTimeSpan = TimeSpan.FromDays(7);    // Время жизни cookie
         options.SlidingExpiration = true;                  // Обновление при активности
         options.Cookie.HttpOnly = true;                    // Защита от XSS

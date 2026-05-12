@@ -1,0 +1,143 @@
+﻿:root {
+    --primary-gradient-start: #667eea;
+    --primary-gradient-end: #764ba2;
+}
+
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(135deg, var(--primary-gradient-start) 0%, var(--primary-gradient-end) 100%);
+    color: white;
+    padding: 60px 0;
+    margin-bottom: 40px;
+    border-radius: 0 0 20px 20px;
+}
+
+    .hero-section h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+
+/* Search Card */
+.search-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    margin-top: -30px;
+    margin-bottom: 40px;
+}
+
+/* Olympiad Cards */
+.olympiad-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    height: 100%;
+}
+
+    .olympiad-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+
+.card-img-top {
+    height: 200px;
+    object-fit: cover;
+}
+
+.card-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.card-text {
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+.badge-status {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    z-index: 1;
+}
+
+.date-info {
+    font-size: 0.85rem;
+    color: #888;
+    margin-bottom: 8px;
+}
+
+    .date-info i {
+        width: 20px;
+        color: #667eea;
+    }
+
+.btn-register {
+    background: linear-gradient(135deg, var(--primary-gradient-start) 0%, var(--primary-gradient-end) 100%);
+    border: none;
+    border-radius: 25px;
+    padding: 10px 20px;
+    color: white;
+    font-weight: 600;
+}
+
+    .btn-register:hover {
+        color: white;
+        opacity: 0.9;
+    }
+
+.btn-outline-register {
+    border: 2px solid #667eea;
+    background: transparent;
+    color: #667eea;
+    border-radius: 25px;
+    padding: 8px 20px;
+    font-weight: 600;
+}
+
+    .btn-outline-register:hover:not(:disabled) {
+        background: linear-gradient(135deg, var(--primary-gradient-start) 0%, var(--primary-gradient-end) 100%);
+        color: white;
+    }
+
+    .btn-outline-register:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 15px;
+}
+
+    .empty-state i {
+        font-size: 64px;
+        color: #ccc;
+        margin-bottom: 20px;
+    }
+
+@@media (max-width: 768px) {
+    .hero-section {
+        padding: 40px 0;
+    }
+
+        .hero-section h1 {
+            font-size: 1.75rem;
+        }
+
+    .search-card {
+        padding: 20px;
+    }
+}
