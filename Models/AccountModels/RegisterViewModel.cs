@@ -2,7 +2,7 @@
 
 
 
-namespace Olimpiadnic.Models
+namespace Olimpiadnic.Models.AccountModels
 {
     public class RegisterViewModel
     {

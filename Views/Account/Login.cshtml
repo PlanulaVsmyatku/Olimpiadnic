@@ -1,8 +1,10 @@
-﻿@{
+﻿@using Olimpiadnic.Models.AccountModels
+@model LoginViewModel
+
+@{
     ViewData["Title"] = "Вход";
     var returnUrl = ViewData["ReturnUrl"] as string;
 }
-@model LoginViewModel
 <head>
     <link rel="stylesheet" href="~/css/ImgWord.css" />
 </head>
@@ -66,7 +68,7 @@
                                     <input class="form-check-input" type="checkbox" asp-for="RememberMe">
                                     <label class="form-check-label" asp-for="RememberMe"></label>
                                 </div>
-                                <a asp-action="ForgotPassword" class="text-decoration-none small">
+                                <a asp-controller="PasswordRecovery" asp-action="ForgotPassword" class="text-decoration-none small">
                                     Забыли пароль?
                                 </a>
                             </div>

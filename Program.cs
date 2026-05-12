@@ -1,9 +1,13 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Olimpiadnic.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+// Добавление кастомных сервисов
+builder.Services.AddScoped<IPasswordRecoveryService, PasswordRecoveryService>();
 
 // Настройка аутентификации через cookies
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

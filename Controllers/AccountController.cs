@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Olimpiadnic.Models;
+using Olimpiadnic.Models.AccountModels;
 using System.IO;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace Olimpiadnic.Controllers
@@ -17,6 +19,26 @@ namespace Olimpiadnic.Controllers
         public string Index()
         {
             return "Ответ по умолчанию";
+        }
+
+        private readonly IWebHostEnvironment _webHostEnvironment;
+
+        // TODO -> EmailSender
+        // private readonly IEmailSender _emailSender;
+
+        public AccountController(IWebHostEnvironment webHostEnvironment)
+        {
+            _webHostEnvironment = webHostEnvironment;
+        }
+
+        // Вспомогательный DTO для пользователя
+        private class UserDto
+        {
+            public required int Id { get; set; }
+            public required string Login { get; set; }
+            public required string Email { get; set; }
+            public required string FullName { get; set; }
+            public required string EducationLevel { get; set; }
         }
 
         #region Форма входа
@@ -150,24 +172,10 @@ namespace Olimpiadnic.Controllers
             return View();
         }
 
-        // Вспомогательный DTO для пользователя
-        private class UserDto
-        {
-            public required int Id { get; set; }
-            public required string Login { get; set; }
-            public required string Email { get; set; }
-            public required string FullName { get; set; }
-            public required string EducationLevel { get; set; }
-        }
+        
         #endregion
 
         #region Форма регистрации
-        private readonly IWebHostEnvironment _webHostEnvironment;
-
-        public AccountController(IWebHostEnvironment webHostEnvironment)
-        {
-            _webHostEnvironment = webHostEnvironment;
-        }
 
         [HttpGet]
         [AllowAnonymous]

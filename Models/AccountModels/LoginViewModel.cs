@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Olimpiadnic.Models
+namespace Olimpiadnic.Models.AccountModels
 {
     public class LoginViewModel
     {
