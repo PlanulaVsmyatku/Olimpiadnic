@@ -3,7 +3,7 @@
     --primary-gradient-end: #764ba2;
 }
 
-/* Hero Section */
+/* Цветастая форма */
 .hero-section {
     background: linear-gradient(135deg, var(--primary-gradient-start) 0%, var(--primary-gradient-end) 100%);
     color: white;
@@ -17,7 +17,7 @@
         font-weight: 700;
     }
 
-/* Search Card */
+/* Карточка поиска */
 .search-card {
     background: white;
     border-radius: 20px;
@@ -27,7 +27,7 @@
     margin-bottom: 40px;
 }
 
-/* Olympiad Cards */
+/* Карточки олимпиад */
 .olympiad-card {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     border: none;
@@ -42,6 +42,15 @@
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
     }
 
+/* Гарантируем, что секция с олимпиадами имеет отступ снизу */
+#olympiads {
+    margin-bottom: 3rem !important;
+}
+
+/* Дополнительный отступ для последнего элемента в контейнере */
+.container > :last-child {
+    margin-bottom: 0;
+}
 .card-img-top {
     height: 200px;
     object-fit: cover;
