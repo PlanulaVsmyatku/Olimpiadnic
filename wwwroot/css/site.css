@@ -30,3 +30,10 @@ body {
   text-align: start;
 }
 
+.background-fixed {
+    background-image: url('../images/blue_scene5.jpg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    min-height: 100vh;
+}

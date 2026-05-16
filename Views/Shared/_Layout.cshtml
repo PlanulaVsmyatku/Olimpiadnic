@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
-<body>
+<body class="background-fixed">
     <header>
         <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow fixed-top">
             <div class="container-fluid">
@@ -135,14 +135,14 @@
         </nav>
     </header>
 
-    <main style="margin-top: 76px;">
+    <main style="flex: 1 0 auto; margin-top: 76px; margin-bottom: 76px;">
         <div class="container-fluid px-4 content-wrapper pb-5 ">
             @RenderBody()
         </div>
     </main>
 
-    <footer class="border-top footer text-muted bg-white mt-5">
-        <div class="container py-3">
+    <footer class="border-top footer text-muted bg-transparent mt-5" style="flex-shrink: 0; margin-top: auto;">
+        <div class="container py-3 text-light">
             &copy; 2026 - Олимпиадник - <a asp-controller="Home" asp-action="Privacy">Политика конфиденциальности</a>
         </div>
     </footer>
