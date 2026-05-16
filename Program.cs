@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Olimpiadnic.Models;
+using Olimpiadnic.Models.RoleModels;
 using Olimpiadnic.Services;
 
 var builder = WebApplication.CreateBuilder(args);
