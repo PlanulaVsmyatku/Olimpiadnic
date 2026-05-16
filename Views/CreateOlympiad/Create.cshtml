@@ -1,0 +1,287 @@
+@using Olimpiadnic.Models.OlympiadModels
+@model CreateOlympiadViewModel
+
+@{
+    ViewData["Title"] = "Создание олимпиады";
+    var questionIndex = 0;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .form-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .form-section h3 {
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .question-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .option-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .btn-remove {
+            background: none;
+            border: none;
+            color: #dc3545;
+            cursor: pointer;
+        }
+        
+        .btn-add {
+            margin-top: 10px;
+        }
+        
+        .type-switch {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .auto-fields, .manual-fields {
+            display: none;
+        }
+        
+        .auto-fields.active, .manual-fields.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <h2 class="mb-4">
+        <i class="fas fa-plus-circle me-2"></i>Создание олимпиады
+        <small class="text-muted fs-6">Заполните информацию об олимпиаде и добавьте вопросы</small>
+    </h2>
+
+    <form asp-action="Create" method="post" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+        <!-- Основная информация -->
+        <div class="form-section">
+            <h3><i class="fas fa-info-circle me-2"></i>Основная информация</h3>
+            
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label asp-for="Title" class="form-label fw-semibold"></label>
+                    <input asp-for="Title" class="form-control" />
+                    <span asp-validation-for="Title" class="text-danger"></span>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label asp-for="ImageFile" class="form-label fw-semibold"></label>
+                    <input asp-for="ImageFile" type="file" class="form-control" accept="image/*" />
+                    <small class="text-muted">Рекомендуемый размер: 800x400px</small>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label fw-semibold"></label>
+                <textarea asp-for="Description" class="form-control" rows="6"></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+            
+            <div class="mb-3">
+                <label asp-for="Credentials" class="form-label fw-semibold"></label>
+                <textarea asp-for="Credentials" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Credentials" class="text-danger"></span>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label asp-for="RegistOpen" class="form-label fw-semibold"></label>
+                    <input asp-for="RegistOpen" class="form-control" type="datetime-local" />
+                    <span asp-validation-for="RegistOpen" class="text-danger"></span>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label asp-for="RegistClosed" class="form-label fw-semibold"></label>
+                    <input asp-for="RegistClosed" class="form-control" type="datetime-local" />
+                    <span asp-validation-for="RegistClosed" class="text-danger"></span>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label asp-for="EventStart" class="form-label fw-semibold"></label>
+                    <input asp-for="EventStart" class="form-control" type="datetime-local" />
+                    <span asp-validation-for="EventStart" class="text-danger"></span>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label asp-for="EventEnd" class="form-label fw-semibold"></label>
+                    <input asp-for="EventEnd" class="form-control" type="datetime-local" />
+                    <span asp-validation-for="EventEnd" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Вопросы -->
+        <div class="form-section">
+            <h3><i class="fas fa-question-circle me-2"></i>Вопросы олимпиады</h3>
+            
+            <div id="questions-container">
+                @foreach (var question in Model.Questions)
+                {
+                    questionIndex++;
+                    <div class="question-card" data-question-temp-id="@question.TempId">
+                        <div class="question-header">
+                            <h5 class="mb-0">Вопрос @question.OrderNumber</h5>
+                            <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                    asp-action="RemoveQuestion" 
+                                    asp-route-tempId="@question.TempId"
+                                    onclick="return confirm('Удалить вопрос?')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        
+                        <input type="hidden" name="Questions[@(questionIndex-1)].TempId" value="@question.TempId" />
+                        <input type="hidden" name="Questions[@(questionIndex-1)].QuestionId" value="@question.QuestionId" />
+                        
+                        <div class="row">
+                            <div class="col-md-2 mb-3">
+                                <label class="form-label">Номер вопроса</label>
+                                <input type="number" name="Questions[@(questionIndex-1)].OrderNumber" 
+                                       class="form-control" value="@question.OrderNumber" />
+                            </div>
+                            <div class="col-md-10 mb-3">
+                                <label class="form-label">Описание вопроса</label>
+                                <textarea name="Questions[@(questionIndex-1)].Description" 
+                                          class="form-control" rows="3">@question.Description</textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="type-switch">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" 
+                                       name="Questions[@(questionIndex-1)].Type" 
+                                       value="auto" id="auto_@question.TempId" 
+                                       @(question.Type == "auto" ? "checked" : "") />
+                                <label class="form-check-label" for="auto_@question.TempId">
+                                    <i class="fas fa-check-circle"></i> Тестовый вопрос
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" 
+                                       name="Questions[@(questionIndex-1)].Type" 
+                                       value="manual" id="manual_@question.TempId"
+                                       @(question.Type == "manual" ? "checked" : "") />
+                                <label class="form-check-label" for="manual_@question.TempId">
+                                    <i class="fas fa-pen"></i> Развёрнутый ответ
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Поля для тестового вопроса -->
+                        <div class="auto-fields" data-question="@question.TempId" style="display: @(question.Type == "auto" ? "block" : "none")">
+                            <label class="form-label">Варианты ответов</label>
+                            <div id="options-container-@question.TempId">
+                                @for (int optIndex = 0; optIndex < question.Options.Count; optIndex++)
+                                {
+                                    var option = question.Options[optIndex];
+                                    <div class="option-row">
+                                        <input type="hidden" name="Questions[@(questionIndex-1)].Options[@optIndex].TempId" value="@option.TempId" />
+                                        <input type="checkbox" name="Questions[@(questionIndex-1)].Options[@optIndex].IsCorrect" value="true" 
+                                               @(option.IsCorrect ? "checked" : "") />
+                                        <input type="text" name="Questions[@(questionIndex-1)].Options[@optIndex].OptionText" 
+                                               class="form-control" value="@option.OptionText" placeholder="Текст варианта ответа" />
+                                        <input type="hidden" name="Questions[@(questionIndex-1)].Options[@optIndex].SortOrder" value="@option.SortOrder" />
+                                        <button type="submit" class="btn-remove" 
+                                                asp-action="RemoveOption" 
+                                                asp-route-questionTempId="@question.TempId" 
+                                                asp-route-optionTempId="@option.TempId">
+                                            <i class="fas fa-times-circle"></i>
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-secondary btn-add" 
+                                    asp-action="AddOption" asp-route-questionTempId="@question.TempId">
+                                <i class="fas fa-plus"></i> Добавить вариант
+                            </button>
+                        </div>
+                        
+                        <!-- Поля для развёрнутого ответа -->
+                        <div class="manual-fields" data-question="@question.TempId" style="display: @(question.Type == "manual" ? "block" : "none")">
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Максимальный балл</label>
+                                    <input type="number" name="Questions[@(questionIndex-1)].MaxScore" 
+                                           class="form-control" value="@question.MaxScore" />
+                                </div>
+                                <div class="col-md-9 mb-3">
+                                    <label class="form-label">Эталонный ответ</label>
+                                    <textarea name="Questions[@(questionIndex-1)].ModelAnswer" 
+                                              class="form-control" rows="3">@question.ModelAnswer</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            
+            <button type="submit" class="btn btn-outline-primary" asp-action="AddQuestion">
+                <i class="fas fa-plus"></i> Добавить вопрос
+            </button>
+        </div>
+
+        <!-- Кнопки отправки -->
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary btn-lg" asp-action="CreateOlympiad">
+                <i class="fas fa-save me-2"></i>Сохранить олимпиаду
+            </button>
+            <a asp-controller="Dashboard" asp-action="MyOlympiads" class="btn btn-secondary btn-lg ms-2">
+                <i class="fas fa-times me-2"></i>Отмена
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Переключение между типами вопросов
+    document.querySelectorAll('input[type="radio"][name$=".Type"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            var name = this.name;
+            var questionId = this.closest('.question-card').dataset.questionTempId;
+            var autoFields = document.querySelector(`.auto-fields[data-question="${questionId}"]`);
+            var manualFields = document.querySelector(`.manual-fields[data-question="${questionId}"]`);
+            
+            if (this.value === 'auto') {
+                autoFields.style.display = 'block';
+                manualFields.style.display = 'none';
+            } else {
+                autoFields.style.display = 'none';
+                manualFields.style.display = 'block';
+            }
+        });
+    });
+</script>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}
+
+</body>
+</html>

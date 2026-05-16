@@ -1,4 +1,4 @@
-@using Olimpiadnic.Models
+@using Olimpiadnic.Models.RoleModels
 @model UserProfileViewModel
 
 @{
@@ -24,13 +24,13 @@
             
             @if (role == "Участник")
             {
-                <a class="nav-link" id="my-olympiads-tab" href="/Dashboard/MyOlympiads">
+                    <a class="nav-link" id="my-olympiads-tab" href="/Olympiad/MyOlympiads">
                     <i class="fas fa-trophy"></i> Мои олимпиады
                 </a>
-                <a class="nav-link" id="completed-tab" href="/Dashboard/CompletedOlympiads">
+                    <a class="nav-link" id="completed-tab" href="/Olympiad/CompletedOlympiads">
                     <i class="fas fa-check-circle"></i> Пройденные олимпиады
                 </a>
-                <a class="nav-link" id="edit-profile-tab" href="/Dashboard/EditProfile">
+                    <a class="nav-link" id="edit-profile-tab" href="/Profile/EditProfile">
                     <i class="fas fa-edit"></i> Редактировать профиль
                 </a>
                 <div class="mt-3 px-3">
@@ -42,48 +42,36 @@
             }
             else if (role == "Сотрудник")
             {
-                <a class="nav-link" id="my-olympiads-tab" href="/Dashboard/MyOlympiads">
+                    <a class="nav-link" id="my-olympiads-tab" href="/Olympiad/MyOlympiads">
                     <i class="fas fa-list-alt"></i> Мои олимпиады
                 </a>
-                <a class="nav-link" id="edit-profile-tab" href="/Dashboard/EditProfile">
+                    <a class="nav-link" id="edit-profile-tab" href="/Profile/EditProfile">
                     <i class="fas fa-edit"></i> Редактировать профиль
                 </a>
-                <a class="nav-link" id="create-olympiad-tab" href="/Olympiad/Create">
+                    <a class="nav-link" id="create-olympiad-tab" href="/CreateOlympiad/Create">
                     <i class="fas fa-plus-circle"></i> Создать олимпиаду
                 </a>
-                <div class="mt-3 px-3">
-                    <div class="status-badge @(Model.IsActive ? "status-active" : "status-inactive")">
-                        <i class="fas @(Model.IsActive ? "fa-check-circle" : "fa-clock") me-1"></i>
-                        Статус: @(Model.IsActive ? "Активирован" : "Ожидает активации")
-                    </div>
-                </div>
             }
             else if (role == "Администратор")
             {
-                <a class="nav-link" id="my-olympiads-tab" href="/Dashboard/MyOlympiads">
+                    <a class="nav-link" id="my-olympiads-tab" href="/Olympiad/MyOlympiads">
                     <i class="fas fa-list-alt"></i> Мои олимпиады
                 </a>
-                <a class="nav-link" id="edit-profile-tab" href="/Dashboard/EditProfile">
+                <a class="nav-link" id="edit-profile-tab" href="/Profile/EditProfile">
                     <i class="fas fa-edit"></i> Редактировать профиль
                 </a>
-                <a class="nav-link" id="create-olympiad-tab" href="/Olympiad/Create">
+                    <a class="nav-link" id="create-olympiad-tab" href="/CreateOlympiad/Create">
                     <i class="fas fa-plus-circle"></i> Создать олимпиаду
                 </a>
-                <a class="nav-link" id="statistics-tab" href="/Dashboard/Statistics">
+                    <a class="nav-link" id="statistics-tab" href="/AdminBoard/Statistics">
                     <i class="fas fa-chart-line"></i> Статистика
                 </a>
-                <a class="nav-link" id="all-users-tab" href="/Dashboard/AllUsers">
+                    <a class="nav-link" id="all-users-tab" href="/AdminBoard/AllUsers">
                     <i class="fas fa-users"></i> Профили пользователей
                 </a>
-                <a class="nav-link" id="all-olympiads-tab" href="/Dashboard/AllOlympiads">
+                    <a class="nav-link" id="all-olympiads-tab" href="/AdminBoard/AllOlympiads">
                     <i class="fas fa-globe"></i> Все олимпиады
                 </a>
-                <div class="mt-3 px-3">
-                    <div class="status-badge @(Model.IsActive ? "status-active" : "status-inactive")">
-                        <i class="fas @(Model.IsActive ? "fa-check-circle" : "fa-clock") me-1"></i>
-                        Статус: @(Model.IsActive ? "Активирован" : "Ожидает активации")
-                    </div>
-                </div>
             }
         </nav>
     </aside>

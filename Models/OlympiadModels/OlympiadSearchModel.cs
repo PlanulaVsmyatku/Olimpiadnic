@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Olimpiadnic.Models.HomeModels
+namespace Olimpiadnic.Models.OlympiadModels
 {
     // Модель для поиска
     public class OlympiadSearchViewModel

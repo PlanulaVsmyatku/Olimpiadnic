@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Olimpiadnic.Models;
 using Olimpiadnic.Models.AccountModels;
+using Olimpiadnic.Models.RoleModels;
 using System.IO;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -84,7 +85,8 @@ namespace Olimpiadnic.Controllers
                         new Claim(ClaimTypes.Name, user.Login),
                         new Claim(ClaimTypes.Email, user.Email),
                         new Claim("FullName", user.FullName ?? ""),
-                        new Claim("EducationLevel", user.EducationLevel ?? "")
+                        new Claim("EducationLevel", user.EducationLevel ?? ""),
+                        new Claim(ClaimTypes.Role, user.Role)
                     };
 
                     var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -173,33 +175,12 @@ namespace Olimpiadnic.Controllers
                     Email = user.Email,
                     FullName = user.FullName,
                     EducationLevel = user.Role == UserRoles.Participant ? "Высшее" : "",
-                    Role = user.Role  
+                    Role = user.Role
                 };
             }
 
             return null;
         }
-
-        [Authorize]
-        public IActionResult Profile()
-        {
-            // Получение ID пользователя
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            // Получение логина
-            var login = User.Identity.Name;
-
-            // Получение email
-            var email = User.FindFirst(ClaimTypes.Email)?.Value;
-
-            // Получение кастомного поля
-            var fullName = User.FindFirst("FullName")?.Value;
-
-            // TODO: Загрузить пользователя из БД и отдать в представление
-            return View();
-        }
-
-        
         #endregion
 
         #region Форма регистрации

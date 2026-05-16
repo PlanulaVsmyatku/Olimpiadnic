@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Olimpiadnic.Models;
 using Olimpiadnic.Models.HomeModels;
+using Olimpiadnic.Models.OlympiadModels;
 using System.Diagnostics;
 using System.Security.Claims;
 

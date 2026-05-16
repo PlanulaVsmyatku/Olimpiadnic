@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Olimpiadnic.Models.OlympiadModels;
+using System.ComponentModel.DataAnnotations;
 
 namespace Olimpiadnic.Models.HomeModels
 {

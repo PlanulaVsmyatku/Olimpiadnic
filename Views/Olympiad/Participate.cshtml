@@ -1,0 +1,263 @@
+@using Olimpiadnic.Models.OlympiadModels
+@model OlympiadParticipationViewModel
+
+@{
+    ViewData["Title"] = $"{Model.OlympiadTitle} - Вопрос {Model.CurrentQuestionIndex + 1} из {Model.TotalQuestions}";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            background: #f0f2f5;
+        }
+        
+        .progress-container {
+            background: white;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .progress-bar-custom {
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+        
+        .question-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .question-number {
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .question-text {
+            font-size: 1.2rem;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        
+        .question-text code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .option {
+            margin-bottom: 12px;
+        }
+        
+        .option label {
+            margin-left: 10px;
+            cursor: pointer;
+        }
+        
+        .attachments {
+            margin-bottom: 20px;
+        }
+        
+        .attachment-img {
+            max-width: 100%;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        
+        .manual-answer {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            font-family: monospace;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+        
+        .btn-nav {
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-weight: 600;
+        }
+        
+        .btn-submit {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+        }
+        
+        .question-type-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        
+        .type-auto { background: #e3f2fd; color: #1976d2; }
+        .type-manual { background: #fff3e0; color: #f57c00; }
+    </style>
+</head>
+<body>
+
+<div class="container py-4">
+    <!-- Заголовок и прогресс -->
+    <div class="progress-container">
+        <div class="d-flex justify-content-between mb-2">
+            <h5 class="mb-0">@Model.OlympiadTitle</h5>
+            <span class="text-muted">Вопрос @(Model.CurrentQuestionIndex + 1) из @Model.TotalQuestions</span>
+        </div>
+        <div class="progress-bar-custom">
+            <div class="progress-fill" style="width: @((Model.CurrentQuestionIndex + 1) * 100 / Model.TotalQuestions)%"></div>
+        </div>
+    </div>
+    
+    <!-- Карточка вопроса -->
+    <div class="question-card">
+        <!-- Тип вопроса -->
+        <div class="question-type-badge @(Model.CurrentQuestion.Type == "auto" ? "type-auto" : "type-manual")">
+            <i class="fas @(Model.CurrentQuestion.Type == "auto" ? "fa-check-circle" : "fa-pen") me-1"></i>
+            @(Model.CurrentQuestion.Type == "auto" ? "Тестовое задание" : "Развёрнутый ответ")
+        </div>
+        
+        <!-- Номер вопроса -->
+        <div class="question-number">
+            <i class="fas fa-question-circle me-2"></i>Вопрос @Model.CurrentQuestion.OrderNumber
+        </div>
+        
+        <!-- Текст вопроса -->
+        <div class="question-text">
+            @Html.Raw(Model.CurrentQuestion.Description)
+        </div>
+        
+        <!-- Вложения (изображения) -->
+        @if (Model.CurrentQuestion.Attachments.Any())
+        {
+            <div class="attachments">
+                @foreach (var attachment in Model.CurrentQuestion.Attachments)
+                {
+                    <img src="@attachment" class="attachment-img" alt="Вложение к вопросу" />
+                }
+            </div>
+        }
+        
+        <!-- Форма ответа -->
+        <form asp-action="SaveAnswer" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="OlympiadId" />
+            <input type="hidden" asp-for="ParticipantId" />
+            <input type="hidden" asp-for="CurrentQuestionIndex" />
+            <input type="hidden" name="CurrentQuestion.QuestionId" value="@Model.CurrentQuestion.QuestionId" />
+            <input type="hidden" name="CurrentQuestion.Type" value="@Model.CurrentQuestion.Type" />
+            
+            @if (Model.CurrentQuestion.Type == "auto")
+            {
+                // Тестовый вопрос - варианты ответов
+                <div class="options-container">
+                    @for (int i = 0; i < Model.CurrentQuestion.Options.Count; i++)
+                    {
+                        var option = Model.CurrentQuestion.Options[i];
+                        <div class="option">
+                            <input type="radio" name="CurrentQuestion.SelectedOptionIds" 
+                                   value="@option.OptionId" id="opt_@option.OptionId"
+                                   @(option.IsSelected ? "checked" : "") />
+                            <label for="opt_@option.OptionId">@option.OptionText</label>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                // Развёрнутый ответ - текстовое поле
+                <textarea name="CurrentQuestion.ManualAnswer" class="manual-answer" 
+                          placeholder="Введите ваш ответ здесь...">@Model.CurrentQuestion.ManualAnswer</textarea>
+            }
+            
+            <!-- Кнопки навигации -->
+            <div class="nav-buttons mt-4">
+                @if (Model.CurrentQuestionIndex > 0)
+                {
+                    <button type="submit" name="previous" value="previous" class="btn btn-outline-secondary btn-nav">
+                        <i class="fas fa-arrow-left me-2"></i>Назад
+                    </button>
+                }
+                else
+                {
+                    <div></div>
+                }
+    
+                @if (Model.CurrentQuestionIndex + 1 < Model.TotalQuestions)
+                {
+                    <button type="submit" name="next" value="next" class="btn btn-primary btn-nav">
+                        Далее<i class="fas fa-arrow-right ms-2"></i>
+                    </button>
+                }
+                else
+                {
+                    <button type="submit" name="next" value="next" class="btn btn-submit btn-nav">
+                        <i class="fas fa-check-circle me-2"></i>Завершить олимпиаду
+                    </button>
+                }
+            </div>
+
+        </form>
+    </div>
+    
+    <!-- Таймер (опционально) -->
+    <div class="text-center text-muted mt-3">
+        <small><i class="fas fa-clock me-1"></i>Убедитесь, что у вас есть стабильное интернет-соединение</small>
+    </div>
+</div>
+
+<script>
+    function goToPrevious() {
+        var form = document.createElement('form');
+        form.method = 'post';
+        form.action = '@Url.Action("PreviousQuestion", "Olympiad")';
+        
+        var antiForgeryToken = document.createElement('input');
+        antiForgeryToken.type = 'hidden';
+        antiForgeryToken.name = '__RequestVerificationToken';
+        antiForgeryToken.value = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        form.appendChild(antiForgeryToken);
+        
+        var olympiadId = document.createElement('input');
+        olympiadId.type = 'hidden';
+        olympiadId.name = 'olympiadId';
+        olympiadId.value = '@Model.OlympiadId';
+        form.appendChild(olympiadId);
+        
+        var currentIndex = document.createElement('input');
+        currentIndex.type = 'hidden';
+        currentIndex.name = 'currentIndex';
+        currentIndex.value = '@Model.CurrentQuestionIndex';
+        form.appendChild(currentIndex);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>
+
+</body>
+</html>

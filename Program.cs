@@ -7,6 +7,15 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+// Добавление сессий (для временного хранения ответов)
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
 // Добавление кастомных сервисов
 builder.Services.AddScoped<IPasswordRecoveryService, PasswordRecoveryService>();
 
@@ -16,7 +25,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.LoginPath = "/Account/Login";        // Путь к странице входа
         options.LogoutPath = "/Account/Logout";      // Путь к выходу
-        options.AccessDeniedPath = "/Shared/AccessDenied"; // Страница отказа в доступе
+        options.AccessDeniedPath = "/Home/AccessDenied"; // Страница отказа в доступе
         options.ExpireTimeSpan = TimeSpan.FromDays(7);    // Время жизни cookie
         options.SlidingExpiration = true;                  // Обновление при активности
         options.Cookie.HttpOnly = true;                    // Защита от XSS
@@ -50,7 +59,7 @@ app.UseRouting();
 
 app.UseAuthentication();  // Кто это?
 app.UseAuthorization();   // Может ли он это делать?
-
+app.UseSession();
 
 app.MapControllerRoute(
     name: "default",
