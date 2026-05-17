@@ -38,8 +38,12 @@ namespace Olimpiadnic.Controllers
             public required int Id { get; set; }
             public required string Login { get; set; }
             public required string Email { get; set; }
+            public string? phone { get; set; }
+            public string? Department { get; set; }
+            public string? City { get; set; }
             public required string FullName { get; set; }
             public required string EducationLevel { get; set; }
+            public string? EducationalInstitution { get; set; }
             public required string Role { get; set; }
         }
 
@@ -201,7 +205,7 @@ namespace Olimpiadnic.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(RegisterViewModel model)
+        public async Task<IActionResult> Register(ParticipantRegisterViewModel model)
         {
             // ВАЖНО: Проверка подтверждения пароля происходит здесь автоматически
             // Атрибут [Compare] в модели уже добавил ошибку в ModelState, если пароли не совпадают

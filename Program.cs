@@ -1,8 +1,15 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.EntityFrameworkCore;
+using Olimpiadnic.Data;
 using Olimpiadnic.Models.RoleModels;
 using Olimpiadnic.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Регистрируем наш контекст в контейнере зависимостей
+builder.Services.AddDbContext<AppDbContext>(options =>
+    // Указываем, что используем SQL Server (SSMS) и берем строку из настроек
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

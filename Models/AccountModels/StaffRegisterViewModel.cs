@@ -1,0 +1,22 @@
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Olimpiadnic.Models.AccountModels
+{
+    /// <summary>
+    /// Данные характерные для сотрудника
+    /// </summary>
+    public class StaffRegisterViewModel : ProfileModel
+    {
+
+        [Required(ErrorMessage = "Введите номер телефона")]
+        [Phone(ErrorMessage = "Некорректный формат телефона")]
+        [Display(Name = "Телефон")]
+        public required string Phone { get; set; }
+
+        //Выпадающий список ( Отдел дополнительного образования, Методический отдел,  учебная часть - кафедра 1, учебная часть - кафедра 2, учебная часть - кафедра 3)
+        [Required(ErrorMessage = "Выберите отдел")]
+        [Display(Name = "Отдел")]
+        public required string Department { get; set; }
+
+    }
+}
