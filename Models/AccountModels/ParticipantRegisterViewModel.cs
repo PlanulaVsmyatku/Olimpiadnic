@@ -1,12 +1,16 @@
 ﻿using System.ComponentModel.DataAnnotations;
-
 namespace Olimpiadnic.Models.AccountModels
 {
-    /// <summary>
-    /// Данные характерные для участника
-    /// </summary>
-    public class ParticipantRegisterViewModel : ProfileModel
+    public class ParticipantRegisterViewModel : RegisterViewModel
     {
+        //=== участник ===
+        [Required(ErrorMessage = "Укажите город")]
+        [Display(Name = "Город")]
+        public required string City { get; set; }
+
+        [Required(ErrorMessage = "Укажите учебное заведение")]
+        [Display(Name = "Учебное заведение")]
+        public required string EducationalInstitution { get; set; }
 
         [Required(ErrorMessage = "Выберите уровень образования")]
         [Display(Name = "Уровень образования")]
@@ -23,4 +27,3 @@ namespace Olimpiadnic.Models.AccountModels
         public string? ConsentFileName { get; set; }
     }
 }
-

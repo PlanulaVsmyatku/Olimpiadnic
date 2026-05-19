@@ -1,12 +1,27 @@
 ﻿using System.ComponentModel.DataAnnotations;
-
 namespace Olimpiadnic.Models.AccountModels
 {
+
     /// <summary>
-    /// Данные характерные для сотрудника
+    /// Класс для отображения форы регистрации
     /// </summary>
-    public class StaffRegisterViewModel : ProfileModel
+    public class StaffRegisterFormModel
     {
+        public required string InviteToken { get; set; }
+        public required string Email { get; set; }
+    }
+    /// <summary>
+    /// Класс для записи и валидации формы регистрации сотрудника
+    /// Поля: === string InviteToken; 
+    ///       string Phone; 
+    ///       string Department; === *
+    ///        === наследованные: string Login; string Password; string FullName; string Email; ===
+    /// </summary>
+    public class StaffRegisterViewModel : RegisterViewModel
+    {
+        //=== Сотрудник ===
+        [Required(ErrorMessage = "Необходима ссылка-приглашение")]
+        public required string InviteToken { get; set; }
 
         [Required(ErrorMessage = "Введите номер телефона")]
         [Phone(ErrorMessage = "Некорректный формат телефона")]
@@ -17,6 +32,5 @@ namespace Olimpiadnic.Models.AccountModels
         [Required(ErrorMessage = "Выберите отдел")]
         [Display(Name = "Отдел")]
         public required string Department { get; set; }
-
     }
 }

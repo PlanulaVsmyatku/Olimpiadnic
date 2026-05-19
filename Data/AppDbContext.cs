@@ -22,6 +22,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<AutoSubmissionResult> AutoSubmissionResults { get; set; }
 
+    public virtual DbSet<Invite> Invites { get; set; }
+
     public virtual DbSet<ManualQuestionsConfig> ManualQuestionsConfigs { get; set; }
 
     public virtual DbSet<ManualQuestionsConfigSnapshot> ManualQuestionsConfigSnapshots { get; set; }
@@ -112,6 +114,29 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.SubmissionItem).WithMany(p => p.AutoSubmissionResults)
                 .HasForeignKey(d => d.SubmissionItemId)
                 .HasConstraintName("FK__Auto_Subm__submi__0C85DE4D");
+        });
+
+        modelBuilder.Entity<Invite>(entity =>
+        {
+            entity.ToTable(tb => tb.HasTrigger("trg_Invites_InsteadOfUpdate"));
+
+            entity.HasIndex(e => e.Email, "IX_Invites_Email");
+
+            entity.HasIndex(e => e.ExpiresAt, "IX_Invites_ExpiresAt");
+
+            entity.HasIndex(e => e.IsUsed, "IX_Invites_IsUsed");
+
+            entity.HasIndex(e => e.Token, "IX_Invites_Token");
+
+            entity.HasIndex(e => new { e.Token, e.IsUsed }, "IX_Invites_Token_IsUsed").HasFilter("([IsUsed]=(0))");
+
+            entity.HasIndex(e => e.Token, "UQ__Invites__1EB4F817B57905CF").IsUnique();
+
+            entity.Property(e => e.InviteId).HasColumnName("Invite_ID");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Email).HasMaxLength(256);
+            entity.Property(e => e.RoleId).HasColumnName("Role_ID");
+            entity.Property(e => e.Token).HasMaxLength(255);
         });
 
         modelBuilder.Entity<ManualQuestionsConfig>(entity =>

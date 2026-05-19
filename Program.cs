@@ -24,7 +24,12 @@ builder.Services.AddSession(options =>
 });
 
 // Добавление кастомных сервисов
+// Добавление сервиса восстановления паролей
 builder.Services.AddScoped<IPasswordRecoveryService, PasswordRecoveryService>();
+// Добавление сервиса инвайт-ссылок
+builder.Services.AddScoped<IInviteService, InviteService>();
+// Добавление сервиса для работы с паролями
+builder.Services.AddScoped<IPasswordService, PasswordService>();
 
 // Настройка аутентификации через cookies
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

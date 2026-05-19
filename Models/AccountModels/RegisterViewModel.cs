@@ -2,10 +2,12 @@
 namespace Olimpiadnic.Models.AccountModels
 {
     /// <summary>
-    /// Общие данные учётных записей участника и сотрудника
+    /// Общие данные учётных записей участника и сотрудника.
+    /// Поля: string Login; string Password; string FullName; string Email; + дочерние поля
     /// </summary>
-    public class ProfileModel
+    public class RegisterViewModel
     {
+        //=== Общие поля ===
         [Required(ErrorMessage = "Введите логин")]
         [Display(Name = "Логин")]
         [StringLength(20, MinimumLength = 3, ErrorMessage = "Логин должен быть от 3 до 20 символов")]
@@ -35,15 +37,6 @@ namespace Olimpiadnic.Models.AccountModels
         [Display(Name = "Email")]
         public required string Email { get; set; }
 
-        [Required(ErrorMessage = "Укажите город")]
-        [Display(Name = "Город")]
-        public required string City { get; set; }
-
-        [Required(ErrorMessage = "Укажите учебное заведение")]
-        [Display(Name = "Учебное заведение")]
-        public required string EducationalInstitution { get; set; }
-
-
-
     }
+
 }

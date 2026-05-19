@@ -2,13 +2,18 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.EntityFrameworkCore;
+using Olimpiadnic.Data;
+using Olimpiadnic.Entities;
 using Olimpiadnic.Models;
 using Olimpiadnic.Models.AccountModels;
 using Olimpiadnic.Models.RoleModels;
+using Olimpiadnic.Services;
 using System.IO;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace Olimpiadnic.Controllers
@@ -16,35 +21,52 @@ namespace Olimpiadnic.Controllers
     [Authorize]
     public class AccountController : Controller
     {
-        [AllowAnonymous]
-        public string Index()
-        {
-            return "Ответ по умолчанию";
-        }
-
+        private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IInviteService _inviteService;
+        private readonly IPasswordService _passwordService;
 
         // TODO -> EmailSender
         // private readonly IEmailSender _emailSender;
 
-        public AccountController(IWebHostEnvironment webHostEnvironment)
+        public AccountController(IWebHostEnvironment webHostEnvironment, AppDbContext context, IInviteService inviteService,
+            IPasswordService passwordService)
         {
             _webHostEnvironment = webHostEnvironment;
+            _context = context;
+            _inviteService = inviteService;
+            _passwordService = passwordService;
         }
 
-        // Вспомогательный DTO для пользователя
+        // Вспомогательные DTO
         private class UserDto
         {
             public required int Id { get; set; }
             public required string Login { get; set; }
-            public required string Email { get; set; }
-            public string? phone { get; set; }
-            public string? Department { get; set; }
-            public string? City { get; set; }
             public required string FullName { get; set; }
-            public required string EducationLevel { get; set; }
-            public string? EducationalInstitution { get; set; }
             public required string Role { get; set; }
+        }
+        private class adminDto : UserDto
+        {
+
+        }
+        private class staffDto : UserDto
+        {
+            public required string Email { get; set; }
+            public required string Phone { get; set; }
+            public required string EducationalInstitution { get; set; }
+            public required string Departament { get; set; }
+            public required string City { get; set; }
+
+        }
+        private class participantDto : UserDto
+        {
+            public required string Email { get; set; }
+            public required string EducationLevel { get; set; }
+            public required string City { get; set; }
+            public required string EducationalInstitution { get; set; }
+            public required string Curator { get; set; }
+            public bool isActivated { get; set; }
         }
 
         #region Форма входа
@@ -73,25 +95,45 @@ namespace Olimpiadnic.Controllers
 
             if (ModelState.IsValid)
             {
-                // TODO: Проверка пользователя в базе данных
-                // var user = await _context.Users
-                //     .FirstOrDefaultAsync(u => u.Login == model.LoginOrEmail || u.Email == model.LoginOrEmail);
 
-                // Временная проверка для примера (заменить на реальную проверку в БД)
-                var user = await AuthenticateUser(model.LoginOrEmail, model.Password);
+                // Проверка пользователя в БД
+                var (succes, userDto) = await TryAuthenticateUser(model.LoginOrEmail, model.Password);
 
-                if (user != null)
+                if (succes)
                 {
                     // Создание claims (данных пользователя)
                     var claims = new List<Claim>
                     {
-                        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                        new Claim(ClaimTypes.Name, user.Login),
-                        new Claim(ClaimTypes.Email, user.Email),
-                        new Claim("FullName", user.FullName ?? ""),
-                        new Claim("EducationLevel", user.EducationLevel ?? ""),
-                        new Claim(ClaimTypes.Role, user.Role)
+                        new Claim(ClaimTypes.NameIdentifier, userDto.Id.ToString()),
+                        new Claim(ClaimTypes.Name, userDto.Login),
+                        new Claim("FullName", userDto.FullName ?? ""),
+                        new Claim(ClaimTypes.Role, userDto.Role)
                     };
+
+                    // Добавляем специфичные claims в зависимости от типа
+                    switch (userDto)
+                    {
+                        case adminDto admin:
+                            // Admin не имеет дополнительных полей
+                            break;
+
+                        case staffDto staff:
+                            claims.Add(new Claim(ClaimTypes.Email, staff.Email ?? ""));
+                            claims.Add(new Claim("Phone", staff.Phone ?? ""));
+                            claims.Add(new Claim("EducationalInstitution", staff.EducationalInstitution ?? ""));
+                            claims.Add(new Claim("Department", staff.Departament ?? ""));
+                            claims.Add(new Claim("City", staff.City ?? ""));
+                            break;
+
+                        case participantDto participant:
+                            claims.Add(new Claim(ClaimTypes.Email, participant.Email ?? ""));
+                            claims.Add(new Claim("EducationLevel", participant.EducationLevel ?? ""));
+                            claims.Add(new Claim("City", participant.City ?? ""));
+                            claims.Add(new Claim("EducationalInstitution", participant.EducationalInstitution ?? ""));
+                            claims.Add(new Claim("Curator", participant.Curator ?? ""));
+                            claims.Add(new Claim("IsActivated", participant.isActivated.ToString()));
+                            break;
+                    }
 
                     var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
                     var authProperties = new AuthenticationProperties
@@ -133,62 +175,103 @@ namespace Olimpiadnic.Controllers
             return View("Logout");
         }
 
-        // Вспомогательный метод для проверки пользователя (временный)
-        private async Task<UserDto> AuthenticateUser(string loginOrEmail, string password)
+        // Вспомогательный метод для проверки пользователя 
+        /// <summary>
+        /// Проверяет существование пользователя и возвращает DTO в зависимости от роли
+        /// </summary>
+        /// <param name="loginOrEmail"> Логин или почта</param>
+        /// <param name="password"> Пароль который захешуется</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        private async Task<(bool success, UserDto user)> TryAuthenticateUser(string loginOrEmail, string password)
         {
-            // TODO: Заменить на реальную проверку в базе данных
-            // Пример имитации проверки
-            await Task.Delay(1); // Имитация асинхронности
 
-            // TODO:
-            // 1. Найти пользователя в БД по loginOrEmail
-            // 2. Проверить хеш пароля (BCrypt.Verify(password, user.PasswordHash))
-            // 3. Вернуть пользователя или null
+            // 1. Найти пользователя по логину
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Login == loginOrEmail);
 
-            // Временная заглушка для тестирования
-            // Тестовые учётные данные
-            var testUsers = new List<(string LoginOrEmail, string Password, int Id, string Login, string Email, string FullName, string Role)>
+            // 2. Если не нашли, ищем по email через UserProfile
+            if (user == null)
             {
-                // Администратор
-                ("admin@example.com", "123456", 1, "admin", "admin@example.com", "Администратор Системы", UserRoles.Admin),
-                ("admin", "123456", 1, "admin", "admin@example.com", "Администратор Системы", UserRoles.Admin),
-        
-                // Сотрудник
-                ("staff@example.com", "123456", 2, "petrov_teacher", "staff@example.com", "Петров Пётр Петрович", UserRoles.Staff),
-                ("petrov_teacher", "123456", 2, "petrov_teacher", "staff@example.com", "Петров Пётр Петрович", UserRoles.Staff),
-        
-                // Участник 1
-                ("ivanov_ivan", "123456", 3, "ivanov_ivan", "ivanov@student.ru", "Иванов Иван Иванович", UserRoles.Participant),
-                ("ivanov@student.ru", "123456", 3, "ivanov_ivan", "ivanov@student.ru", "Иванов Иван Иванович", UserRoles.Participant),
-        
-                // Участник 2
-                ("sidorova_maria", "123456", 4, "sidorova_maria", "sidorova@student.ru", "Сидорова Мария Сергеевна", UserRoles.Participant),
-                ("sidorova@student.ru", "123456", 4, "sidorova_maria", "sidorova@student.ru", "Сидорова Мария Сергеевна", UserRoles.Participant),
-            };
+                var profile = await _context.UserProfiles
+                    .FirstOrDefaultAsync(p => p.Email == loginOrEmail);
 
-            var user = testUsers.FirstOrDefault(u =>
-                u.LoginOrEmail.Equals(loginOrEmail, StringComparison.OrdinalIgnoreCase) &&
-                u.Password == password);
-
-            if (user != default)
-            {
-                return new UserDto
+                if (profile != null)
                 {
-                    Id = user.Id,
-                    Login = user.Login,
-                    Email = user.Email,
-                    FullName = user.FullName,
-                    EducationLevel = user.Role == UserRoles.Participant ? "Высшее" : "",
-                    Role = user.Role
-                };
+                    user = await _context.Users
+                        .FirstOrDefaultAsync(u => u.UserId == profile.UserId);
+                }
             }
 
-            return null;
+            if (user != null)
+            {
+                // 2. Проверить хеш пароля
+                if (!_passwordService.VerifyPassword(password, user.PasswordHash))
+                {
+                    return (false, null);
+                }
+
+
+                var userProfile = await _context.UserProfiles.FirstOrDefaultAsync(p => p.UserId == user.UserId);
+
+                
+                // Ищем Table2 через Table1
+                var userRoles = await _context.UserRoles
+                    .FirstOrDefaultAsync(t2 => t2.UserId == user.UserId);
+
+                // Получаем Table3
+                var userRole = await _context.Roles
+                    .FirstOrDefaultAsync(t3 => t3.RoleId == userRoles.RoleId);
+
+                UserDto userDto = userRole.Name switch
+                {
+                    "admin" => new adminDto
+                    {
+                        Id = user.UserId,
+                        Login = user.Login,
+                        FullName = userProfile.FullName,
+                        Role = userRole.Name
+                    },
+
+                    "staff" => new staffDto
+                    {
+                        Id = user.UserId,
+                        Login = user.Login,
+                        FullName = userProfile.FullName,
+                        Role = userRole.Name,
+                        Email = userProfile.Email,
+                        Phone = userProfile.Phone,
+                        EducationalInstitution = userProfile.Organisation,
+                        Departament = userProfile.PositionGrade,
+                        City = userProfile.City
+                    },
+
+                    "participant" => new participantDto
+                    {
+                        Id = user.UserId,
+                        Login = user.Login,
+                        FullName = userProfile.FullName,
+                        Role = userRole.Name,
+                        Email = userProfile.Email,
+                        EducationLevel = userProfile.PositionGrade,
+                        City = userProfile.City,
+                        EducationalInstitution = userProfile.Organisation,
+                        Curator = userProfile.Kurator,
+                        isActivated = user.IsActivated
+                    },
+
+                    _ => throw new ArgumentException($"Неизвестная роль: {userRole.Name}")
+                };
+
+                return (true, userDto);
+            }
+            // 3. Вернуть пользователя или null
+            return (false, null);
         }
         #endregion
 
         #region Форма регистрации
-
+        // GET: /Account/Register - для участников
         [HttpGet]
         [AllowAnonymous]
         public IActionResult Register(string returnUrl = null)
@@ -202,20 +285,23 @@ namespace Olimpiadnic.Controllers
             ViewData["ReturnUrl"] = returnUrl;
             return View();
         }
-
+        // POST: /Account/Register - для участников
         [HttpPost]
+        [AllowAnonymous]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(ParticipantRegisterViewModel model)
+        public async Task<IActionResult>Register(ParticipantRegisterViewModel model)
         {
             // ВАЖНО: Проверка подтверждения пароля происходит здесь автоматически
             // Атрибут [Compare] в модели уже добавил ошибку в ModelState, если пароли не совпадают
 
             if (ModelState.IsValid)
             {
-                // Дополнительная проверка (на всякий случай, хотя Compare уже сработал)
-                if (model.Password != model.ConfirmPassword)
+                #region Общая проверка - пароль, сила пароля, существует ли логин/почта (в теории заменить отдельным классом)
+                // Дополнительная проверка силы пароля
+                var (isValid, message) = _passwordService.ValidatePasswordStrength(model.Password);
+                if (!isValid)
                 {
-                    ModelState.AddModelError("ConfirmPassword", "Пароли не совпадают");
+                    ModelState.AddModelError("Password", message);
                     return View(model);
                 }
 
@@ -230,7 +316,8 @@ namespace Olimpiadnic.Controllers
 
                     return View(model);
                 }
-
+                #endregion
+                
                 // Сохранение файла согласия
                 string consentFilePath = null;
                 if (model.ConsentFile != null && model.ConsentFile.Length > 0)
@@ -249,66 +336,241 @@ namespace Olimpiadnic.Controllers
                     consentFilePath = uniqueFileName;
                 }
 
-               // Хеширование пароля перед сохранением
-               //string hashedPassword = HashPassword(model.Password);
+                //Здесь тоже нужно вывести код отдельно, т.к повторяется в методе регистрации сотрудника
+                // Сохранение пользователя в базу данных
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    // Хеширование пароля перед сохранением
+                    // 1. Сначала создаем пользователя (без связанных данных)
+                    var hashedPassword = _passwordService.HashPassword(model.Password);
 
-                // TODO: Сохранение пользователя в базу данных
-                // var user = new User
-                // {
-                //     Login = model.Login,
-                //     FullName = model.FullName,
-                //     City = model.City,
-                //     Email = model.Email,
-                //     PasswordHash = hashedPassword,
-                //     EducationLevel = model.EducationLevel,
-                //     EducationalInstitution = model.EducationalInstitution,
-                //     Curator = model.Curator,
-                //     ConsentFile = consentFilePath,
-                //     RegisteredAt = DateTime.UtcNow
-                // };
-                // 
-                // _context.Users.Add(user);
-                // await _context.SaveChangesAsync();
+                    var user = new User
+                    {
+                        Login = model.Login,
+                        PasswordHash = hashedPassword,
+                        CreatedAt = DateTime.UtcNow,
+                        IsActivated = false,
+                        LastLogin = null
+                    };
 
-                // Перенаправление на страницу успеха
-                TempData["SuccessMessage"] = "Регистрация прошла успешно!";
-                return RedirectToAction("RegisterSuccess");
+                    // Добавляем пользователя в БД
+                    _context.Users.Add(user);
+                    await _context.SaveChangesAsync(); // Сохраняем, чтобы получить User_ID
+
+                    // 2. Теперь создаем профиль пользователя, используя полученный User_ID
+                    var userProfile = new UserProfile
+                    {
+                        UserId = user.UserId, // Внешний ключ к Users
+                        FullName = model.FullName,
+                        Kurator = model.Curator,
+                        Email = model.Email,
+                        Organisation = model.EducationalInstitution, // если есть
+                        PositionGrade = model.EducationLevel, // если есть
+                        City = model.City,
+                        ConsentFileUrl = consentFilePath
+                    };
+
+                    _context.UserProfiles.Add(userProfile);
+
+                    // 3. Назначаем роль пользователю
+                    var userRole = new UserRole
+                    {
+                        UserId = user.UserId,
+                        RoleId = 1 // Участник
+                    };
+
+                    _context.UserRoles.Add(userRole);
+
+                    // 4. Сохраняем все связанные данные
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    // 5. Перенаправляем на страницу успеха
+                    TempData["SuccessMessage"] = "Регистрация прошла успешно!";
+                    return RedirectToAction("RegisterSuccess");
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    ModelState.AddModelError("", $"Ошибка при регистрации: {ex.Message}");
+                    return View(model);
+                }
             }
 
             // Если модель невалидна, возвращаем форму с ошибками
             return View(model);
         }
 
+        // === регистрация сотрудника по инвайт ссылке ===
+        // GET: /Account/StaffRegister - для сотрудников/админов
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult>StaffRegister(string token)
+        {
+            if (string.IsNullOrEmpty(token))
+            {
+                return RedirectToAction("Index", "Home");
+            }
+            // проверяем валидность токена
+            var isValid = await _inviteService.ValidateInviteToken(token);
+
+            if (!isValid)
+            {
+                ViewBag.Error = "Приглашение недействительно или срок его действия истёк";
+                return RedirectToAction("Index", "Home");
+            }
+
+            var email = await _inviteService.GetInviteEmail(token);
+
+            // Используем форму-модель для GET запроса
+            var model = new StaffRegisterFormModel
+            {
+                InviteToken = token,
+                Email = email
+            };
+
+            return View(model);
+        }
+
+        // POST: /Account/StaffRegister - для сотрудников/админа
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult>StaffRegister(StaffRegisterViewModel model)
+        {
+            // ВАЖНО: Проверка подтверждения пароля происходит здесь автоматически
+            // Атрибут [Compare] в модели уже добавил ошибку в ModelState, если пароли не совпадают
+
+            if (ModelState.IsValid)
+            {
+                // Дополнительная проверка токена
+                var isValidToken = await _inviteService.ValidateInviteToken(model.InviteToken);
+                if (!isValidToken)
+                {
+                    ViewBag.Error = "Приглашение недействительно или срок его действия истёк";
+                    return RedirectToAction("Index", "Home");
+                }
+
+                #region Общая проверка - пароль, сила пароля, существует ли логин/почта (в теории заменить отдельным классом)
+                // Дополнительная проверка (на всякий случай, хотя Compare уже сработал)
+                if (model.Password != model.ConfirmPassword)
+                {
+                    ModelState.AddModelError("ConfirmPassword", "Пароли не совпадают");
+                    return View(model);
+                }
+                // Дополнительная проверка силы пароля
+                var (isValid, message) = _passwordService.ValidatePasswordStrength(model.Password);
+                if (!isValid)
+                { 
+                    return BadRequest(new { error = message });
+                }
+
+
+                // Проверка: существует ли пользователь с таким логином или email
+                if (await UserExists(model.Login, model.Email))
+                {
+                    if (await LoginExists(model.Login))
+                        ModelState.AddModelError("Login", "Пользователь с таким логином уже существует");
+
+                    if (await EmailExists(model.Email))
+                        ModelState.AddModelError("Email", "Пользователь с таким email уже зарегистрирован");
+
+                    return View(model);
+                }
+                #endregion
+
+                // Сохранение пользователя в базу данных
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    // Хеширование пароля перед сохранением
+                    // 1. Сначала создаем пользователя (без связанных данных)
+                    var hashedPassword = _passwordService.HashPassword(model.Password);
+
+                    var user = new User
+                    {
+                        Login = model.Login,
+                        PasswordHash = hashedPassword,
+                        CreatedAt = DateTime.UtcNow,
+                        IsActivated = false,
+                        LastLogin = null
+                    };
+
+                    // Добавляем пользователя в БД
+                    _context.Users.Add(user);
+                    await _context.SaveChangesAsync(); // Сохраняем, чтобы получить User_ID
+
+                    // 2. Теперь создаем профиль пользователя, используя полученный User_ID
+                    var userProfile = new UserProfile
+                    {
+                        UserId = user.UserId, // Внешний ключ к Users
+                        FullName = model.FullName,
+                        Phone = model.Phone,
+                        Email = model.Email,
+                        Organisation = "КузТАГис", // если есть
+                        PositionGrade = model.Department, // если есть
+                        City = "Кузбасс, Кемерово"
+                    };
+
+                    _context.UserProfiles.Add(userProfile);
+
+                    // 3. Назначаем роль пользователю
+                    var userRole = new UserRole 
+                    {
+                        UserId = user.UserId,
+                        RoleId = 2 // Сотрудник
+                    };
+
+                    _context.UserRoles.Add(userRole);
+
+                    // 4. Сохраняем все связанные данные
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    // 5. Используем токен приглашения
+                    await _inviteService.UseInviteToken(model.InviteToken);
+
+                    // 6. Перенаправляем на страницу успеха
+                    TempData["SuccessMessage"] = "Регистрация прошла успешно!";
+                    return RedirectToAction("RegisterSuccess");
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    ModelState.AddModelError("", $"Ошибка при регистрации: {ex.Message}");
+                    return View(model);
+                }
+
+                
+            }
+
+            // Если модель невалидна, возвращаем форму с ошибками
+            return View(model);
+        }
+
+
         // Вспомогательные методы
         private async Task<bool> UserExists(string login, string email)
         {
-            // TODO: Проверка в базе данных
-            // return await _context.Users.AnyAsync(u => u.Login == login || u.Email == email);
-            return false;
+            // Проверка в базе данных
+            return await _context.Users.AnyAsync(u => u.Login == login) || await _context.UserProfiles.AnyAsync(p => p.Email == email);
+
         }
 
         private async Task<bool> LoginExists(string login)
         {
-            // TODO: Проверка в базе данных
-            // return await _context.Users.AnyAsync(u => u.Login == login);
-            return false;
+            // Проверка в базе данных
+            return await _context.Users.AnyAsync((User u) => u.Login == login);
+            
         }
 
         private async Task<bool> EmailExists(string email)
         {
             // TODO: Проверка в базе данных
-            // return await _context.Users.AnyAsync(u => u.Email == email);
-            return false;
+             return await _context.UserProfiles.AnyAsync(p => p.Email == email);
+            
         }
-
-        /*
-        private string HashPassword(string password)
-        {
-            // Использовать BCrypt, PBKDF2 или другой безопасный алгоритм
-            // Пример с BCrypt (нужен пакет BCrypt.Net-Next)
-            return BCrypt.Net.BCrypt.HashPassword(password);
-        }
-        */
 
         [AllowAnonymous]
         public IActionResult RegisterSuccess()
