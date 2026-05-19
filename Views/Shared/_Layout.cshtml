@@ -42,14 +42,18 @@
                         
                         @if (User.Identity.IsAuthenticated)
                         {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Dashboard" asp-action="MyOlympiads">
-                                    <i class="fas fa-trophy me-1"></i>Мои олимпиады
-                                </a>
-                            </li>
+                            @if (!User.IsInRole("admin"))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="Olympiad" asp-action="MyOlympiads">
+                                        <i class="fas fa-trophy me-1"></i>Мои олимпиады
+                                    </a>
+                                </li>
+                            }
+                                
                             
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Dashboard" asp-action="Profile">
+                                <a class="nav-link text-dark" asp-controller="Profile" asp-action="Profile">
                                     <i class="fas fa-user-circle me-1"></i>Личный кабинет
                                 </a>
                             </li>
@@ -64,7 +68,7 @@
                                 </div>
                             }
 
-                            @if (User.IsInRole("Сотрудник") || User.IsInRole("Администратор"))
+                            @if (User.IsInRole("staff"))
                             {
                                 <li class="nav-item">
                                     <a class="nav-link text-dark" asp-controller="Olympiad" asp-action="Create">
@@ -78,16 +82,21 @@
                                 </li>
                             }
                             
-                            @if (User.IsInRole("Администратор"))
+                            @if (User.IsInRole("admin"))
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark" asp-controller="Dashboard" asp-action="Statistics">
+                                    <a class="nav-link text-dark" asp-controller="AdminBoard" asp-action="Statistics">
                                         <i class="fas fa-chart-line me-1"></i>Статистика
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark" asp-controller="Dashboard" asp-action="AllUsers">
+                                    <a class="nav-link text-dark" asp-controller="AdminBoard" asp-action="AllUsers">
                                         <i class="fas fa-users me-1"></i>Профили пользователей
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="AdminBoard" asp-action="CreateInvite">
+                                        <i class="fas fa-users me-1"></i>Создать инвайт-ссылку
                                     </a>
                                 </li>
                             }
@@ -100,18 +109,18 @@
                             <div class="dropdown">
                                 <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                     👤 @(User.FindFirst("FullName")?.Value ?? User.Identity.Name)
-                                    @if (User.IsInRole("Администратор"))
+                                    @if (User.IsInRole("admin"))
                                     {
-                                        <span class="badge bg-danger ms-1">Admin</span>
+                                        <span class="badge bg-danger ms-1">Администратор</span>
                                     }
-                                    else if (User.IsInRole("Сотрудник"))
+                                    else if (User.IsInRole("staff"))
                                     {
-                                        <span class="badge bg-primary ms-1">Staff</span>
+                                        <span class="badge bg-primary ms-1">Сотрудник</span>
                                     }
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li>
-                                        <a class="dropdown-item" asp-controller="Dashboard" asp-action="Profile">
+                                        <a class="dropdown-item" asp-controller="Profile" asp-action="Profile">
                                             <i class="fas fa-id-card me-2"></i>Профиль
                                         </a>
                                     </li>

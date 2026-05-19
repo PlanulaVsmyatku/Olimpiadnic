@@ -44,6 +44,7 @@ namespace Olimpiadnic.Controllers
             public required int Id { get; set; }
             public required string Login { get; set; }
             public required string FullName { get; set; }
+            public required string Email { get; set; }
             public required string Role { get; set; }
         }
         private class adminDto : UserDto
@@ -52,7 +53,6 @@ namespace Olimpiadnic.Controllers
         }
         private class staffDto : UserDto
         {
-            public required string Email { get; set; }
             public required string Phone { get; set; }
             public required string EducationalInstitution { get; set; }
             public required string Departament { get; set; }
@@ -61,7 +61,6 @@ namespace Olimpiadnic.Controllers
         }
         private class participantDto : UserDto
         {
-            public required string Email { get; set; }
             public required string EducationLevel { get; set; }
             public required string City { get; set; }
             public required string EducationalInstitution { get; set; }
@@ -107,6 +106,7 @@ namespace Olimpiadnic.Controllers
                         new Claim(ClaimTypes.NameIdentifier, userDto.Id.ToString()),
                         new Claim(ClaimTypes.Name, userDto.Login),
                         new Claim("FullName", userDto.FullName ?? ""),
+                        new Claim(ClaimTypes.Email, userDto.Email ?? ""),
                         new Claim(ClaimTypes.Role, userDto.Role)
                     };
 
@@ -118,7 +118,7 @@ namespace Olimpiadnic.Controllers
                             break;
 
                         case staffDto staff:
-                            claims.Add(new Claim(ClaimTypes.Email, staff.Email ?? ""));
+                            
                             claims.Add(new Claim("Phone", staff.Phone ?? ""));
                             claims.Add(new Claim("EducationalInstitution", staff.EducationalInstitution ?? ""));
                             claims.Add(new Claim("Department", staff.Departament ?? ""));
@@ -126,7 +126,6 @@ namespace Olimpiadnic.Controllers
                             break;
 
                         case participantDto participant:
-                            claims.Add(new Claim(ClaimTypes.Email, participant.Email ?? ""));
                             claims.Add(new Claim("EducationLevel", participant.EducationLevel ?? ""));
                             claims.Add(new Claim("City", participant.City ?? ""));
                             claims.Add(new Claim("EducationalInstitution", participant.EducationalInstitution ?? ""));
@@ -230,7 +229,8 @@ namespace Olimpiadnic.Controllers
                         Id = user.UserId,
                         Login = user.Login,
                         FullName = userProfile.FullName,
-                        Role = userRole.Name
+                        Role = userRole.Name,
+                        Email = userProfile.Email
                     },
 
                     "staff" => new staffDto
@@ -453,12 +453,6 @@ namespace Olimpiadnic.Controllers
                 }
 
                 #region Общая проверка - пароль, сила пароля, существует ли логин/почта (в теории заменить отдельным классом)
-                // Дополнительная проверка (на всякий случай, хотя Compare уже сработал)
-                if (model.Password != model.ConfirmPassword)
-                {
-                    ModelState.AddModelError("ConfirmPassword", "Пароли не совпадают");
-                    return View(model);
-                }
                 // Дополнительная проверка силы пароля
                 var (isValid, message) = _passwordService.ValidatePasswordStrength(model.Password);
                 if (!isValid)

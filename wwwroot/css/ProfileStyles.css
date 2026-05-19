@@ -1,0 +1,245 @@
+﻿.dashboard-container {
+    display: flex;
+    gap: 20px;
+    min-height: calc(100vh - 200px);
+}
+
+.dashboard-sidebar {
+    width: 280px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 20px 0;
+    flex-shrink: 0;
+}
+
+    .dashboard-sidebar .nav-link {
+        padding: 12px 24px;
+        color: #333;
+        border-radius: 0;
+        transition: all 0.3s ease;
+    }
+
+        .dashboard-sidebar .nav-link:hover {
+            background: #f0f0f0;
+        }
+
+        .dashboard-sidebar .nav-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .dashboard-sidebar .nav-link i {
+            width: 24px;
+            margin-right: 10px;
+        }
+
+.dashboard-content {
+    flex: 1;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 30px;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.info-row {
+    display: flex;
+    padding: 12px 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.info-label {
+    width: 180px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.info-value {
+    flex: 1;
+    color: #6c757d;
+}
+
+@@media (max-width: 768px) {
+    .dashboard-container {
+        flex-direction: column;
+    }
+
+    .dashboard-sidebar {
+        width: 100%;
+    }
+
+    .info-label {
+        width: 120px;
+    }
+}
+
+.edit-mode {
+    background-color: #fff8e1;
+    transition: all 0.3s ease;
+}
+
+.info-row-edit {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+}
+
+    .info-row-edit .info-label {
+        width: 200px;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .info-row-edit .info-value-input {
+        flex: 1;
+    }
+
+    .info-row-edit input,
+    .info-row-edit select {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+
+        .info-row-edit input:focus,
+        .info-row-edit select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52,152,219,0.2);
+        }
+
+.profile-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e0e0e0;
+}
+
+.btn-edit {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+    .btn-edit:hover {
+        background-color: #2980b9;
+        transform: translateY(-2px);
+    }
+
+.btn-save {
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+    .btn-save:hover {
+        background-color: #229954;
+        transform: translateY(-2px);
+    }
+
+.btn-reset-password {
+    background-color: #e67e22;
+    color: white;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+    .btn-reset-password:hover {
+        background-color: #d35400;
+        transform: translateY(-2px);
+    }
+
+.btn-cancel {
+    background-color: #95a5a6;
+    color: white;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+    .btn-cancel:hover {
+        background-color: #7f8c8d;
+    }
+
+.spinner {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+}
+
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    color: white;
+    z-index: 1000;
+    animation: slideIn 0.3s ease-out;
+}
+
+.toast-success {
+    background-color: #27ae60;
+}
+
+.toast-error {
+    background-color: #e74c3c;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.readonly-view {
+    background-color: #f8f9fa;
+    padding: 0.5rem;
+    border-radius: 4px;
+    color: #2c3e50;
+}

@@ -3,143 +3,447 @@
 
 @{
     ViewData["Title"] = "Личный кабинет";
-    var role = ViewBag.UserRole as string ?? "Участник";
+    var role = ViewBag.UserRole as string ?? "Роль?";
+
+    // Определяем тип модели во время выполнения
+    bool isParticipant = Model is ParticipantProfileViewModel;
+    bool isStaff = Model is StaffProfileViewModel;
+    bool isAdmin = Model is AdminProfileViewModel;
+
 }
 
 <!DOCTYPE html>
 <html>
 <head>
-    <link rel="stylesheet" href="~/css/DashBoardStyles.css" />
+    <link rel="stylesheet" href="~/css/ProfileStyles.css" />
 </head>
 <body>
 
 <div class="dashboard-container">
-    <!-- Вертикальная навигация -->
+    <!-- Вертикальная навигация (без изменений) -->
     <aside class="dashboard-sidebar">
         <nav class="nav flex-column">
-            <!-- Профиль (общий для всех) -->
-            <a class="nav-link active" id="profile-tab" href="/Dashboard/Profile">
+            <a class="nav-link active" id="profile-tab" href="/Profile/Profile">
                 <i class="fas fa-user-circle"></i> Профиль
             </a>
             
-            @if (role == "Участник")
+            @if (isParticipant)
             {
-                    <a class="nav-link" id="my-olympiads-tab" href="/Olympiad/MyOlympiads">
+                var participantModel = Model as ParticipantProfileViewModel;
+                <a class="nav-link" id="my-olympiads-tab" href="/Olympiad/MyOlympiads">
                     <i class="fas fa-trophy"></i> Мои олимпиады
                 </a>
-                    <a class="nav-link" id="completed-tab" href="/Olympiad/CompletedOlympiads">
+                <a class="nav-link" id="completed-tab" href="/Olympiad/CompletedOlympiads">
                     <i class="fas fa-check-circle"></i> Пройденные олимпиады
                 </a>
-                    <a class="nav-link" id="edit-profile-tab" href="/Profile/EditProfile">
-                    <i class="fas fa-edit"></i> Редактировать профиль
-                </a>
                 <div class="mt-3 px-3">
-                    <div class="status-badge @(Model.IsActive ? "status-active" : "status-inactive")">
-                        <i class="fas @(Model.IsActive ? "fa-check-circle" : "fa-clock") me-1"></i>
-                        Статус: @(Model.IsActive ? "Активирован" : "Ожидает активации")
+                        <div class="status-badge @(participantModel.IsActive ? "status-active" : "status-inactive")">
+                            <i class="fas @(participantModel.IsActive ? "fa-check-circle" : "fa-clock") me-1"></i>
+                            Статус: @(participantModel.IsActive ? "Активирован" : "Ожидает активации")
                     </div>
                 </div>
             }
-            else if (role == "Сотрудник")
-            {
+                else if (isStaff)
+                {
                     <a class="nav-link" id="my-olympiads-tab" href="/Olympiad/MyOlympiads">
+                        <i class="fas fa-list-alt"></i> Мои олимпиады
+                    </a>
+                    <a class="nav-link" id="create-olympiad-tab" href="/CreateOlympiad/Create">
+                        <i class="fas fa-plus-circle"></i> Создать олимпиаду
+                    </a>
+                }
+                else if (isAdmin)
+                {
+                    <!--
+                <a class="nav-link" id="my-olympiads-tab" href="/Olympiad/MyOlympiads">
                     <i class="fas fa-list-alt"></i> Мои олимпиады
                 </a>
-                    <a class="nav-link" id="edit-profile-tab" href="/Profile/EditProfile">
-                    <i class="fas fa-edit"></i> Редактировать профиль
-                </a>
-                    <a class="nav-link" id="create-olympiad-tab" href="/CreateOlympiad/Create">
+                <a class="nav-link" id="create-olympiad-tab" href="/CreateOlympiad/Create">
                     <i class="fas fa-plus-circle"></i> Создать олимпиаду
                 </a>
-            }
-            else if (role == "Администратор")
-            {
-                    <a class="nav-link" id="my-olympiads-tab" href="/Olympiad/MyOlympiads">
-                    <i class="fas fa-list-alt"></i> Мои олимпиады
-                </a>
-                <a class="nav-link" id="edit-profile-tab" href="/Profile/EditProfile">
-                    <i class="fas fa-edit"></i> Редактировать профиль
-                </a>
-                    <a class="nav-link" id="create-olympiad-tab" href="/CreateOlympiad/Create">
-                    <i class="fas fa-plus-circle"></i> Создать олимпиаду
-                </a>
+                -->
+                    <a class="nav-link" id="my-olympiads-tab" href="/AdminBoard/CreateInvite">
+                        <i class="fas fa-list-alt"></i> Создать инвайт-ссылку
+                    </a>
                     <a class="nav-link" id="statistics-tab" href="/AdminBoard/Statistics">
-                    <i class="fas fa-chart-line"></i> Статистика
-                </a>
+                        <i class="fas fa-chart-line"></i> Статистика
+                    </a>
                     <a class="nav-link" id="all-users-tab" href="/AdminBoard/AllUsers">
-                    <i class="fas fa-users"></i> Профили пользователей
-                </a>
+                        <i class="fas fa-users"></i> Профили пользователей
+                    </a>
                     <a class="nav-link" id="all-olympiads-tab" href="/AdminBoard/AllOlympiads">
-                    <i class="fas fa-globe"></i> Все олимпиады
-                </a>
-            }
+                        <i class="fas fa-globe"></i> Все олимпиады
+                    </a>
+                }
         </nav>
     </aside>
 
-    <!-- Основной контент (Профиль по умолчанию) -->
+    <!-- Основной контент -->
     <main class="dashboard-content" id="dashboardContent">
         <div id="profile-content">
-            <h2 class="mb-4">
-                <i class="fas fa-user-circle me-2"></i>Профиль пользователя
-                @if (role == "Администратор")
-                {
-                    <span class="badge bg-danger ms-2">Администратор</span>
-                }
-                else if (role == "Сотрудник")
-                {
-                    <span class="badge bg-primary ms-2">Сотрудник</span>
-                }
-                else
-                {
-                    <span class="badge bg-secondary ms-2">Участник</span>
-                }
-            </h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 class="mb-0">
+                    <i class="fas fa-user-circle me-2"></i>Профиль пользователя
+                        @if (isAdmin)
+                        {
+                            <span class="badge bg-danger ms-2">Администратор</span>
+                        }
+                        else if (isStaff)
+                        {
+                            <span class="badge bg-primary ms-2">Сотрудник</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary ms-2">Участник</span>
+                        }
+                </h2>
+                
+                <!-- Кнопки действий -->
+                <div id="action-buttons">
+                    <button id="editButton" class="btn-edit" onclick="enableEditMode()">
+                        <i class="fas fa-edit"></i> Редактировать
+                    </button>
+                </div>
+            </div>
             
-            <div class="info-row">
-                <div class="info-label"><i class="fas fa-user me-2"></i> @Html.DisplayNameFor(m => m.Login)</div>
-                <div class="info-value">@Model.Login</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label"><i class="fas fa-signature me-2"></i> @Html.DisplayNameFor(m => m.FullName)</div>
-                <div class="info-value">@Model.FullName</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label"><i class="fas fa-envelope me-2"></i> @Html.DisplayNameFor(m => m.Email)</div>
-                <div class="info-value">@Model.Email</div>
-            </div>
-            @if (!string.IsNullOrEmpty(Model.PhoneNumber))
-            {
-                <div class="info-row">
-                    <div class="info-label"><i class="fas fa-phone me-2"></i> @Html.DisplayNameFor(m => m.PhoneNumber)</div>
-                    <div class="info-value">@Model.PhoneNumber</div>
+            <!-- Форма профиля -->
+            <form id="profileForm" method="post" action="@Url.Action("UpdateProfile", "Profile")">
+                @Html.AntiForgeryToken()
+                
+                <div id="profileDisplay">
+                        <!-- Режим просмотра -->
+                        <div id="viewMode">
+                            <div class="info-row">
+                                <div class="info-label"><i class="fas fa-user me-2"></i> Логин</div>
+                                <div class="info-value">@Model.Login</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label"><i class="fas fa-signature me-2"></i> ФИО</div>
+                                <div class="info-value">@Model.FullName</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label"><i class="fas fa-envelope me-2"></i> Email</div>
+                                <div class="info-value">@Model.Email</div>
+                            </div>
+
+                            @if (isParticipant)
+                            {
+                                var participantModel = Model as ParticipantProfileViewModel;
+
+                                @if (!string.IsNullOrEmpty(participantModel.EducationalInstitution))
+                                {
+                                    <div class="info-row">
+                                        <div class="info-label"><i class="fas fa-university me-2"></i> Учебное заведение</div>
+                                        <div class="info-value">@participantModel.EducationalInstitution</div>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(participantModel.EducationLevel))
+                                {
+                                    <div class="info-row">
+                                        <div class="info-label"><i class="fas fa-graduation-cap me-2"></i> Уровень образования</div>
+                                        <div class="info-value">@participantModel.EducationLevel</div>
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrEmpty(participantModel.Curator))
+                                {
+                                    <div class="info-row">
+                                        <div class="info-label"><i class="fas fa-chalkboard-user me-2"></i> Куратор</div>
+                                        <div class="info-value">@participantModel.Curator</div>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(participantModel.City))
+                                {
+                                    <div class="info-row">
+                                        <div class="info-label"><i class="fas fa-city me-2"></i> Город</div>
+                                        <div class="info-value">@participantModel.City</div>
+                                    </div>
+                                }
+
+                            }
+
+                            @if (isStaff)
+                            {
+                                var staffModel = Model as StaffProfileViewModel;
+                                @if (!string.IsNullOrEmpty(staffModel.EducationalInstitution))
+                                {
+                                    <div class="info-row">
+                                        <div class="info-label"><i class="fas fa-university me-2"></i> Учебное заведение</div>
+                                        <div class="info-value">@staffModel.EducationalInstitution</div>
+                                    </div>
+                                }
+
+                                @if (!string.IsNullOrEmpty(staffModel.PhoneNumber))
+                                {
+                                    <div class="info-row">
+                                        <div class="info-label"><i class="fas fa-phone me-2"></i> Телефон</div>
+                                        <div class="info-value">@staffModel.PhoneNumber</div>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(staffModel.Departament))
+                                {
+                                    <div class="info-row">
+                                        <div class="info-label"><i class="fas fa-briefcase me-2"></i> Отдел</div>
+                                        <div class="info-value">@staffModel.Departament</div>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(staffModel.City))
+                                {
+                                    <div class="info-row">
+                                        <div class="info-label"><i class="fas fa-city me-2"></i> Город</div>
+                                        <div class="info-value">@staffModel.City</div>
+                                    </div>
+                                }
+
+                            }
+
+                        </div>
+
+                        <!-- Режим редактирования (скрыт по умолчанию) -->
+                        <div id="editMode" style="display: none;">
+                            <input type="hidden" name="Role" value="@role" />
+
+                            <div class="info-row-edit">
+                                <div class="info-label"><i class="fas fa-user me-2"></i> Логин</div>
+                                <div class="info-value-input">
+                                    <input type="text" name="Login" value="@Model.Login" class="readonly-view" readonly disabled />
+                                    <small class="text-muted">Логин нельзя изменить</small>
+                                </div>
+                            </div>
+
+                            <div class="info-row-edit">
+                                <div class="info-label"><i class="fas fa-signature me-2"></i> ФИО</div>
+                                <div class="info-value-input">
+                                    <input type="text" name="FullName" value="@Model.FullName" required />
+                                </div>
+                            </div>
+
+                            <div class="info-row-edit">
+                                <div class="info-label"><i class="fas fa-envelope me-2"></i> Email</div>
+                                <div class="info-value-input">
+                                    <input type="email" name="Email" value="@Model.Email" required />
+                                </div>
+                            </div>
+
+                            @if (isStaff)
+                            {
+                                var staffModel = Model as StaffProfileViewModel;
+                                <div class="info-row-edit">
+                                    <div class="info-label"><i class="fas fa-phone me-2"></i> Телефон</div>
+                                    <div class="info-value-input">
+                                        <input type="tel" name="PhoneNumber" value="@(staffModel?.PhoneNumber)" />
+                                    </div>
+                                </div>
+
+                                <div class="info-row-edit">
+                                    <div class="info-label"><i class="fas fa-briefcase me-2"></i> Отдел</div>
+                                    <div class="info-value-input">
+                                        <select name="Departament" class="form-select">
+                                            <option value="">-- Выберите отдел --</option>
+                                            <option value="Отдел дополнительного образования">Доп.Образование</option>
+                                            <option value="Методический отдел">Методический отдел</option>
+                                            <option value="Кафедра 1">Кафедра 1</option>
+                                            <option value="Кафедра 2">Кафедра 2</option>
+                                            <option value="Кафедра 3">Кафедра 3</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="info-row-edit">
+                                    <div class="info-label"><i class="fas fa-university me-2"></i> Учебное заведение</div>
+                                    <div class="info-value-input">
+                                        <input type="text" name="EducationalInstitution" value="@(staffModel?.EducationalInstitution)" />
+                                    </div>
+                                </div>
+
+                                <div class="info-row-edit">
+                                    <div class="info-label"><i class="fas fa-city me-2"></i> Город</div>
+                                    <div class="info-value-input">
+                                        <input type="text" name="City" value="@(staffModel?.City)" />
+                                    </div>
+                                </div>
+                            }
+
+                            @if (isParticipant)
+                            {
+                                var participantModel = Model as ParticipantProfileViewModel;
+                                <div class="info-row-edit">
+                                    <div class="info-label"><i class="fas fa-graduation-cap me-2"></i> Уровень образования</div>
+                                    <div class="info-value-input">
+                                        <select name="EducationLevel" class="form-select">
+                                            <option value="">-- Выберите уровень --</option>
+                                            <option value="Школа">Школа</option>
+                                            <option value="СПО">СПО</option>
+                                            <option value="Высшее">Высшее</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="info-row-edit">
+                                    <div class="info-label"><i class="fas fa-city me-2"></i> Город</div>
+                                    <div class="info-value-input">
+                                        <input type="text" name="City" value="@(participantModel?.City)" />
+                                    </div>
+                                </div>
+
+                                <div class="info-row-edit">
+                                    <div class="info-label"><i class="fas fa-university me-2"></i> Учебное заведение</div>
+                                    <div class="info-value-input">
+                                        <input type="text" name="EducationalInstitution"
+                                               list="institutionsList"
+                                               value="@(participantModel?.EducationalInstitution)"
+                                               class="form-control"
+                                               placeholder="Введите или выберите учебное заведение" />
+                                        <datalist id="institutionsList">
+                                            <option value="МГУ имени М.В. Ломоносова"></option>
+                                            <option value="СПбГУ"></option>
+                                            <option value="НИУ ВШЭ"></option>
+                                            <option value="КузГТУ"></option>
+                                            <option value="КузТАГИС"></option>
+                                        </datalist>
+                                    </div>
+                                </div>
+
+                                <div class="info-row-edit">
+                                    <div class="info-label"><i class="fas fa-chalkboard-user me-2"></i> Куратор</div>
+                                    <div class="info-value-input">
+                                        <input type="text" name="Curator" value="@(participantModel?.Curator)" />
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="profile-actions">
+                                <button type="button" class="btn-save" onclick="saveProfile()">
+                                    <i class="fas fa-save"></i> Сохранить изменения
+                                </button>
+                                <button type="button" class="btn-reset-password" onclick="resetPassword()">
+                                    <i class="fas fa-key"></i> Сбросить пароль
+                                </button>
+                                <button type="button" class="btn-cancel" onclick="cancelEdit()">
+                                    <i class="fas fa-times"></i> Отмена
+                                </button>
+                            </div>
+                        </div>
+
                 </div>
-            }
-            @if (!string.IsNullOrEmpty(Model.EducationalInstitution))
-            {
-                <div class="info-row">
-                    <div class="info-label"><i class="fas fa-university me-2"></i> @Html.DisplayNameFor(m => m.EducationalInstitution)</div>
-                    <div class="info-value">@Model.EducationalInstitution</div>
-                </div>
-            }
-            @if (!string.IsNullOrEmpty(Model.EducationLevel))
-            {
-                <div class="info-row">
-                    <div class="info-label"><i class="fas fa-graduation-cap me-2"></i> @Html.DisplayNameFor(m => m.EducationLevel)</div>
-                    <div class="info-value">@Model.EducationLevel</div>
-                </div>
-            }
-            @if (!string.IsNullOrEmpty(Model.Position))
-            {
-                <div class="info-row">
-                    <div class="info-label"><i class="fas fa-briefcase me-2"></i> @Html.DisplayNameFor(m => m.Position)</div>
-                    <div class="info-value">@Model.Position</div>
-                </div>
-            }
+            </form>
         </div>
     </main>
 </div>
 
+<!-- Spinner -->
+<div class="spinner" id="spinner">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Загрузка...</span>
+    </div>
+</div>
+
 <script>
+    function enableEditMode() {
+        document.getElementById('viewMode').style.display = 'none';
+        document.getElementById('editMode').style.display = 'block';
+        document.getElementById('editButton').style.display = 'none';
+        
+        // Добавляем класс редактирования к контейнеру
+        document.getElementById('profile-content').classList.add('edit-mode');
+    }
+    
+    function cancelEdit() {
+        document.getElementById('viewMode').style.display = 'block';
+        document.getElementById('editMode').style.display = 'none';
+        document.getElementById('editButton').style.display = 'inline-block';
+        
+        document.getElementById('profile-content').classList.remove('edit-mode');
+        
+        // Перезагружаем данные из формы (отменяем изменения)
+        location.reload();
+    }
+    
+    async function saveProfile() {
+        const form = document.getElementById('profileForm');
+        const formData = new FormData(form);
+        
+        showSpinner();
+        
+        try {
+            const response = await fetch('@Url.Action("UpdateProfile", "Profile")', {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast('Профиль успешно обновлен!', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                showToast(result.message || 'Ошибка при обновлении профиля', 'error');
+                cancelEdit();
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('Произошла ошибка при сохранении', 'error');
+        } finally {
+            hideSpinner();
+        }
+    }
+    
+    async function resetPassword() {
+        const email = '@Model.Email';
+        
+        if (confirm('Вы уверены, что хотите сбросить пароль? Ссылка для восстановления будет отправлена на ваш email.')) {
+            showSpinner();
+            
+            try {
+                const response = await fetch('@Url.Action("SendResetLink", "PasswordRecovery")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({ email: email })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('Ссылка для сброса пароля отправлена на ваш email', 'success');
+                } else {
+                    showToast(result.message || 'Ошибка при отправке ссылки', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Произошла ошибка при отправке запроса', 'error');
+            } finally {
+                hideSpinner();
+            }
+        }
+    }
+    
+    function showSpinner() {
+        document.getElementById('spinner').style.display = 'block';
+    }
+    
+    function hideSpinner() {
+        document.getElementById('spinner').style.display = 'none';
+    }
+    
+    function showToast(message, type) {
+        const toast = document.createElement('div');
+        toast.className = `toast-notification toast-${type}`;
+        toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>${message}`;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+    
     // Активная ссылка в вертикальном меню
     document.querySelectorAll('.dashboard-sidebar .nav-link').forEach(link => {
         if (window.location.pathname.includes(link.getAttribute('href'))) {

@@ -47,9 +47,9 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("StaffOnly", policy =>
-        policy.RequireRole(UserRoles.Staff, UserRoles.Admin));
+        policy.RequireRole(UserRoles.staff, UserRoles.admin));
     options.AddPolicy("AdminOnly", policy =>
-        policy.RequireRole(UserRoles.Admin));
+        policy.RequireRole(UserRoles.admin));
 });
 
 var app = builder.Build();
