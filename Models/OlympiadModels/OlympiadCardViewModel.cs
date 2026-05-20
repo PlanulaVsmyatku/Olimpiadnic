@@ -15,6 +15,9 @@ namespace Olimpiadnic.Models.OlympiadModels
         [Display(Name = "Изображение")]
         public string? ImageUrl { get; set; }
 
+        [Display(Name = "Рекомендуемый уровень образования")]
+        public string? Credentials { get; set; }
+
         [Display(Name = "Начало проведения")]
         [DataType(DataType.DateTime)]
         public required DateTime EventStart { get; set; }
@@ -36,7 +39,7 @@ namespace Olimpiadnic.Models.OlympiadModels
 
         [Display(Name = "Пользователь уже записан")]
         public bool IsUserRegistered { get; set; } = false;
-
     }
 
 }
+

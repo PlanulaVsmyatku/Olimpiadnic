@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Olimpiadnic.Data;
 using Olimpiadnic.Models.RoleModels;
 using Olimpiadnic.Services;
+using Olimpiadnic.Services.Repos;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,6 +31,8 @@ builder.Services.AddScoped<IPasswordRecoveryService, PasswordRecoveryService>();
 builder.Services.AddScoped<IInviteService, InviteService>();
 // Добавление сервиса для работы с паролями
 builder.Services.AddScoped<IPasswordService, PasswordService>();
+// Добавление сервиса для работы с БД по олимпиадам
+builder.Services.AddScoped<IOlympiadRepository, OlympiadRepository>();
 
 // Настройка аутентификации через cookies
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
