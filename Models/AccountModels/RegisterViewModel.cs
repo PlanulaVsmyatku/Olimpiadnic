@@ -1,15 +1,17 @@
 ﻿using System.ComponentModel.DataAnnotations;
-
-
-
 namespace Olimpiadnic.Models.AccountModels
 {
+    /// <summary>
+    /// Общие данные учётных записей участника и сотрудника.
+    /// Поля: string Login; string Password; string FullName; string Email; + дочерние поля
+    /// </summary>
     public class RegisterViewModel
     {
+        //=== Общие поля ===
         [Required(ErrorMessage = "Введите логин")]
         [Display(Name = "Логин")]
         [StringLength(20, MinimumLength = 3, ErrorMessage = "Логин должен быть от 3 до 20 символов")]
-        [RegularExpression(@"^[a-zA-Zа-яА-Я0-9_]+$",ErrorMessage = "Логин может содержать только буквы (латиница или кириллица), цифры и знак подчеркивания")]
+        [RegularExpression(@"^[a-zA-Zа-яА-Я0-9_]+$", ErrorMessage = "Логин может содержать только буквы (латиница или кириллица), цифры и знак подчеркивания")]
         public required string Login { get; set; }
 
         [Required(ErrorMessage = "Введите пароль")]
@@ -18,6 +20,7 @@ namespace Olimpiadnic.Models.AccountModels
         [StringLength(100, MinimumLength = 6, ErrorMessage = "Пароль должен быть от 6 до 100 символов")]
         public required string Password { get; set; }
 
+        //в БД не идёт. Только для отображения ошибки в представлении
         [Required(ErrorMessage = "Подтвердите пароль")]
         [Display(Name = "Подтверждение пароля")]
         [DataType(DataType.Password)]
@@ -34,27 +37,6 @@ namespace Olimpiadnic.Models.AccountModels
         [Display(Name = "Email")]
         public required string Email { get; set; }
 
-        [Required(ErrorMessage = "Укажите город")]
-        [Display(Name = "Город")]
-        public required string City { get; set; }
-
-        [Required(ErrorMessage = "Выберите уровень образования")]
-        [Display(Name = "Уровень образования")]
-        public required string EducationLevel { get; set; }
-
-        [Required(ErrorMessage = "Укажите учебное заведение")]
-        [Display(Name = "Учебное заведение")]
-        public required string EducationalInstitution { get; set; }
-
-        [Display(Name = "Куратор (ФИО контактного лица)")]
-        public required string Curator { get; set; }
-
-        [Required(ErrorMessage = "Загрузите скан согласия на обработку ПД")]
-        [Display(Name = "Скан согласия на обработку ПД")]
-        public required IFormFile ConsentFile { get; set; }
-
-        // Для отображения имени загруженного файла (опционально)
-        public string? ConsentFileName { get; set; }
     }
-}
 
+}

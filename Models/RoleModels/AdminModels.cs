@@ -86,4 +86,18 @@ namespace Olimpiadnic.Models.RoleModels
 
         public List<string> AvailableRoles { get; set; } = new();
     }
+
+    //Модель для создания ссылки инвайта админов
+    public class InviteRegisterViewModel
+    {
+        [Required]
+        public string InviteToken { get; set; }
+
+        [Required(ErrorMessage = "Введите почту получателя ссылки")]
+        [EmailAddress]
+        public string Email { get; set; }
+
+        public string? Message { get; set; }
+    }
+
 }

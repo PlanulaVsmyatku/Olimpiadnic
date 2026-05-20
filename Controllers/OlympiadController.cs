@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Olimpiadnic.Extensions;
 using Olimpiadnic.Models.OlympiadModels;
+using Olimpiadnic.Models.RoleModels;
 using System.Security.Claims;
 
 namespace Olimpiadnic.Controllers
@@ -461,6 +462,146 @@ namespace Olimpiadnic.Controllers
                 return questions[index];
             }
         }
+
+        #region пока что заглушки - для отображения связанных с олимпиадами данных в личном кабинете - полностью переделать
+        private async Task<List<OlympiadCardViewModel>> GetEnrolledOlympiads(int userId)
+        {
+            await Task.Delay(1);
+            return new List<OlympiadCardViewModel>
+            {
+                new OlympiadCardViewModel
+                {
+                    OlympiadId = 1,
+                    Title = "Олимпиада по математике",
+                    Description = "Международная олимпиада по математике для школьников 9-11 классов",
+                    ImageUrl = "/images/math-olympiad.jpg",
+                    EventStart = new DateTime(2025, 5, 15, 10, 0, 0),
+                    EventEnd = new DateTime(2025, 5, 20, 18, 0, 0),
+                    RegistOpen = DateTime.Now.AddDays(-10),
+                    RegistClosed = DateTime.Now.AddDays(5),
+                    Status = "Регистрация открыта",
+                    IsUserRegistered = true
+                },
+                new OlympiadCardViewModel
+                {
+                    OlympiadId = 2,
+                    Title = "Олимпиада по программированию",
+                    Description = "Всероссийская олимпиада по программированию",
+                    ImageUrl = "/images/programming-olympiad.jpg",
+                    EventStart = new DateTime(2025, 6, 10, 9, 0, 0),
+                    EventEnd = new DateTime(2025, 6, 15, 20, 0, 0),
+                    RegistOpen = DateTime.Now.AddDays(-5),
+                    RegistClosed = DateTime.Now.AddDays(10),
+                    Status = "Регистрация открыта",
+                    IsUserRegistered = true
+                }
+            };
+        }
+
+        private async Task<List<StaffOlympiadCardViewModel>> GetCreatedOlympiads(int userId)
+        {
+            await Task.Delay(1);
+            return new List<StaffOlympiadCardViewModel>
+            {
+                new StaffOlympiadCardViewModel
+                {
+                    OlympiadId = 1,
+                    Title = "Олимпиада по программированию",
+                    Description = "Всероссийская олимпиада по программированию 2025",
+                    ImageUrl = "/images/programming-olympiad.jpg",
+                    EventStart = new DateTime(2025, 6, 10, 9, 0, 0),
+                    EventEnd = new DateTime(2025, 6, 15, 20, 0, 0),
+                    ParticipantsCount = 45,
+                    PendingManualChecks = 12
+                },
+                new StaffOlympiadCardViewModel
+                {
+                    OlympiadId = 2,
+                    Title = "Олимпиада по физике",
+                    Description = "Региональная олимпиада по физике",
+                    ImageUrl = "/images/physics-olympiad.jpg",
+                    EventStart = new DateTime(2025, 7, 20, 10, 0, 0),
+                    EventEnd = new DateTime(2025, 7, 25, 18, 0, 0),
+                    ParticipantsCount = 28,
+                    PendingManualChecks = 5
+                }
+            };
+        }
+
+        private async Task<List<CompletedOlympiadViewModel>> GetCompletedOlympiads(int userId)
+        {
+            await Task.Delay(1);
+            return new List<CompletedOlympiadViewModel>
+            {
+                new CompletedOlympiadViewModel
+                {
+                    OlympiadId = 1,
+                    Title = "Олимпиада по математике (весенняя)",
+                    CompletedAt = new DateTime(2025, 3, 20),
+                    TotalScore = 85,
+                    MaxScore = 100
+                },
+                new CompletedOlympiadViewModel
+                {
+                    OlympiadId = 2,
+                    Title = "Олимпиада по информатике",
+                    CompletedAt = new DateTime(2025, 2, 15),
+                    TotalScore = 92,
+                    MaxScore = 100
+                }
+            };
+        }
+
+
+        private async Task<object> GetParticipantResultsFromDb(int participantId, int olympiadId)
+        {
+            await Task.Delay(1);
+            return new
+            {
+                ParticipantName = "Иванов Иван Иванович",
+                Score = 85,
+                MaxScore = 100,
+                Details = new List<object>
+                {
+                    new { Question = "Вопрос 1", Score = 25, MaxScore = 25, IsCorrect = true },
+                    new { Question = "Вопрос 2", Score = 20, MaxScore = 25, IsCorrect = false },
+                    new { Question = "Вопрос 3 (развёрнутый)", Score = 40, MaxScore = 50, IsCorrect = true }
+                }
+            };
+        }
+
+        private async Task<List<ParticipantResultViewModel>> GetOlympiadParticipantsFromDb(int olympiadId)
+        {
+            await Task.Delay(1);
+            return new List<ParticipantResultViewModel>
+            {
+                new ParticipantResultViewModel
+                {
+                    ParticipantId = 1,
+                    ParticipantName = "Иванов Иван Иванович",
+                    ParticipantLogin = "ivanov_ivan",
+                    Score = 85,
+                    Status = "Завершено"
+                },
+                new ParticipantResultViewModel
+                {
+                    ParticipantId = 2,
+                    ParticipantName = "Петрова Мария Сергеевна",
+                    ParticipantLogin = "petrova_m",
+                    Score = null,
+                    Status = "В процессе"
+                },
+                new ParticipantResultViewModel
+                {
+                    ParticipantId = 3,
+                    ParticipantName = "Сидоров Алексей Дмитриевич",
+                    ParticipantLogin = "sidorov_a",
+                    Score = 92,
+                    Status = "Завершено"
+                }
+            };
+        }
+        #endregion
 
         #endregion
     }

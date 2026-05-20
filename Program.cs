@@ -1,8 +1,16 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.EntityFrameworkCore;
+using Olimpiadnic.Data;
 using Olimpiadnic.Models.RoleModels;
 using Olimpiadnic.Services;
+using Olimpiadnic.Services.Repos;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Регистрируем наш контекст в контейнере зависимостей
+builder.Services.AddDbContext<AppDbContext>(options =>
+    // Указываем, что используем SQL Server (SSMS) и берем строку из настроек
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
@@ -17,7 +25,14 @@ builder.Services.AddSession(options =>
 });
 
 // Добавление кастомных сервисов
+// Добавление сервиса восстановления паролей
 builder.Services.AddScoped<IPasswordRecoveryService, PasswordRecoveryService>();
+// Добавление сервиса инвайт-ссылок
+builder.Services.AddScoped<IInviteService, InviteService>();
+// Добавление сервиса для работы с паролями
+builder.Services.AddScoped<IPasswordService, PasswordService>();
+// Добавление сервиса для работы с БД по олимпиадам
+builder.Services.AddScoped<IOlympiadRepository, OlympiadRepository>();
 
 // Настройка аутентификации через cookies
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -35,9 +50,9 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("StaffOnly", policy =>
-        policy.RequireRole(UserRoles.Staff, UserRoles.Admin));
+        policy.RequireRole(UserRoles.staff, UserRoles.admin));
     options.AddPolicy("AdminOnly", policy =>
-        policy.RequireRole(UserRoles.Admin));
+        policy.RequireRole(UserRoles.admin));
 });
 
 var app = builder.Build();

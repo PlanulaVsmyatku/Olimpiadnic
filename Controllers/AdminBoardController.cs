@@ -174,7 +174,7 @@ namespace Olimpiadnic.Controllers
                     Login = "admin",
                     FullName = "Администратор Системы",
                     Email = "admin@olympiad.ru",
-                    Role = UserRoles.Admin,
+                    Role = UserRoles.admin,
                     IsActive = true,
                     RegisteredAt = new DateTime(2024, 1, 15)
                 },
@@ -184,7 +184,7 @@ namespace Olimpiadnic.Controllers
                     Login = "petrov_teacher",
                     FullName = "Петров Пётр Петрович",
                     Email = "petrov@school.ru",
-                    Role = UserRoles.Staff,
+                    Role = UserRoles.staff,
                     IsActive = true,
                     RegisteredAt = new DateTime(2024, 2, 10)
                 },
@@ -194,7 +194,7 @@ namespace Olimpiadnic.Controllers
                     Login = "ivanov_ivan",
                     FullName = "Иванов Иван Иванович",
                     Email = "ivanov@student.ru",
-                    Role = UserRoles.Participant,
+                    Role = UserRoles.participant,
                     IsActive = true,
                     RegisteredAt = new DateTime(2024, 3, 5)
                 },
@@ -204,7 +204,7 @@ namespace Olimpiadnic.Controllers
                     Login = "sidorova_maria",
                     FullName = "Сидорова Мария Сергеевна",
                     Email = "sidorova@student.ru",
-                    Role = UserRoles.Participant,
+                    Role = UserRoles.participant,
                     IsActive = false,
                     RegisteredAt = new DateTime(2024, 3, 20)
                 }

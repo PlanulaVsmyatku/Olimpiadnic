@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Olimpiadnic.Models;
 using Olimpiadnic.Models.HomeModels;
 using Olimpiadnic.Models.OlympiadModels;
+using Olimpiadnic.Services.Repos;
 using System.Diagnostics;
 using System.Security.Claims;
 
@@ -13,84 +14,62 @@ namespace Olimpiadnic.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly IAntiforgery _antiforgery;
+        private readonly IOlympiadRepository _olympRepository;
 
-        public HomeController(ILogger<HomeController> logger, IAntiforgery antiforgery)
+        public HomeController(ILogger<HomeController> logger, IAntiforgery antiforgery, IOlympiadRepository olympRepository)
         {
             _logger = logger;
             _antiforgery = antiforgery;
+            _olympRepository = olympRepository;
         }
 
         // GET: /Home/Index
         [HttpGet]
         [AllowAnonymous]
-        public async Task<IActionResult> Index(OlympiadSearchViewModel? searchModel)
+        public async Task<IActionResult> Index(OlympiadSearchViewModel? searchModel, int page = 1)
         {
+            // Определяем роль пользователя
+            var isStaff = User.IsInRole("Staff") || User.IsInRole("Admin");
+
+            if (isStaff)
+            {
+                // Для сотрудников - дашборд (будет позже)
+                return RedirectToAction("Profile", "Profile");
+            }
+
+            // Получаем пагинированный список с фильтрацией
+            var pagedResult = await _olympRepository.GetActiveOlympiadsPagedFilteredAsync(searchModel, page, 12);
+
             var viewModel = new IndexViewModel
             {
-                SearchModel = searchModel ?? new OlympiadSearchViewModel(),
-                Olympiads = new List<OlympiadCardViewModel>(),
-                HasResults = false,
-                TotalCount = 0
+                SearchModel = pagedResult.SearchModel ?? new OlympiadSearchViewModel(),
+                Olympiads = pagedResult.Items.ToList(),
+                HasResults = pagedResult.Items.Any(),
+                TotalCount = pagedResult.TotalCount,
+                CurrentPage = pagedResult.CurrentPage,
+                TotalPages = pagedResult.TotalPages,
+                PageSize = pagedResult.PageSize
             };
 
-            // TODO: Заменить на реальные данные из БД
-            var allOlympiads = GetMockOlympiads();
-
-            // Фильтрация
-            var filteredOlympiads = allOlympiads.AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(searchModel?.SearchTitle))
-            {
-                filteredOlympiads = filteredOlympiads.Where(o =>
-                    o.Title.Contains(searchModel.SearchTitle, StringComparison.OrdinalIgnoreCase));
-            }
-
-            if (searchModel?.StartDateFrom != null)
-            {
-                filteredOlympiads = filteredOlympiads.Where(o => o.EventStart >= searchModel.StartDateFrom);
-            }
-
-            if (searchModel?.StartDateTo != null)
-            {
-                filteredOlympiads = filteredOlympiads.Where(o => o.EventStart <= searchModel.StartDateTo);
-            }
-
-            if (searchModel?.EndDateFrom != null)
-            {
-                filteredOlympiads = filteredOlympiads.Where(o => o.EventEnd >= searchModel.EndDateFrom);
-            }
-
-            if (searchModel?.EndDateTo != null)
-            {
-                filteredOlympiads = filteredOlympiads.Where(o => o.EventEnd <= searchModel.EndDateTo);
-            }
-
-            viewModel.Olympiads = filteredOlympiads.ToList();
-            viewModel.HasResults = viewModel.Olympiads.Any();
-            viewModel.TotalCount = viewModel.Olympiads.Count;
-
             // Проверяем, записан ли пользователь на олимпиады
-            if (User.Identity.IsAuthenticated)
+            if (User.Identity.IsAuthenticated && viewModel.Olympiads.Any())
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (!string.IsNullOrEmpty(userId))
                 {
-                    // TODO: Получить ID олимпиад, на которые записан пользователь из БД
-                    // var registeredOlympiadIds = await _context.OlimpiadParticipants
-                    //     .Where(p => p.UserId == userId)
-                    //     .Select(p => p.OlympiadId)
-                    //     .ToListAsync();
-
-                    var registeredOlympiadIds = new List<int>(); // Заглушка
+                    var olympiadIds = viewModel.Olympiads.Select(o => o.OlympiadId).ToList();
+                    var registeredParticipations = await _olympRepository
+                        .GetParticipantsByUserAndOlympiadIdsAsync(userId, olympiadIds);
 
                     foreach (var olympiad in viewModel.Olympiads)
                     {
-                        olympiad.IsUserRegistered = registeredOlympiadIds.Contains(olympiad.OlympiadId);
+                        olympiad.IsUserRegistered = registeredParticipations
+                            .Any(p => p.OlympId == olympiad.OlympiadId);
                     }
                 }
             }
 
-            // Сохраняем AntiForgeryToken для использования в AJAX
+            // Сохраняем AntiForgeryToken
             var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
             HttpContext.Items["AntiforgeryToken"] = tokens.RequestToken;
 

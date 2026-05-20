@@ -1,0 +1,167 @@
+﻿@using Olimpiadnic.Models.AccountModels
+@model StaffRegisterViewModel
+
+@{
+    ViewData["Title"] = "Регистрация - Сотрудник";
+}
+
+
+<body style="background-color: #f0f0f0;">
+
+    <main class="container mt-4 mb-4" aria-labelledby="registerHeading">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-7">
+
+                <article aria-label="Форма регистрации на олимпиаду">
+                    <section class="card shadow border-0 rounded-4 mb-4 mt-3">
+                        <div class="card-body p-4 p-md-5">
+
+                            <header class="text-center mb-4">
+                                <h1 id="registerHeading" class="h2">Регистрация участника</h1>
+                                <p class="text-secondary">Заполните все обязательные поля</p>
+                            </header>
+
+                            <form asp-action="StaffRegister"
+                                  asp-controller="Account"
+                                  method="post"
+                                  enctype="multipart/form-data"
+                                  novalidate>
+
+                                <!-- Общие ошибки модели -->
+                                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                                <!-- Скрытые поля для передачи данных из GET в POST -->
+                                <input type="hidden" name="InviteToken" value="@Model.InviteToken" />
+                                <input type="hidden" name="Email" value="@Model.Email" />
+
+                                <!-- Логин -->
+                                <div class="mb-3">
+                                    <label asp-for="Login" class="form-label fw-semibold"></label>
+                                    <input asp-for="Login" class="form-control" placeholder="Введите логин">
+                                    <span asp-validation-for="Login" class="text-danger"></span>
+                                    <div class="form-text">Логин должен содержать от 3 до 20 символов</div>
+                                </div>
+
+                                <!-- Пароль -->
+                                <div class="mb-3">
+                                    <label asp-for="Password" class="form-label fw-semibold"></label>
+                                    <input asp-for="Password" class="form-control" type="password" id="password" placeholder="Введите пароль">
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" id="showPasswordCheckbox">
+                                        <label class="form-check-label" for="showPasswordCheckbox">
+                                            Показать пароль
+                                        </label>
+                                    </div>
+                                    <span asp-validation-for="Password" class="text-danger"></span>
+                                </div>
+
+                                <!-- Подтверждение пароля -->
+                                <div class="mb-4">
+                                    <label asp-for="ConfirmPassword" class="form-label fw-semibold"></label>
+                                    <input asp-for="ConfirmPassword" class="form-control" type="password" id="confirmPassword" placeholder="Повторите пароль">
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" id="showConfirmPasswordCheckbox">
+                                        <label class="form-check-label" for="showConfirmPasswordCheckbox">
+                                            Показать пароль
+                                        </label>
+                                    </div>
+                                    <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                                </div>
+
+                                <!-- ФИО -->
+                                <div class="mb-3">
+                                    <label asp-for="FullName" class="form-label fw-semibold"></label>
+                                    <input asp-for="FullName" class="form-control" placeholder="Иванов Иван Иванович">
+                                    <span asp-validation-for="FullName" class="text-danger"></span>
+                                </div>
+
+                                <!-- Почта -->
+                                <div class="mb-3">
+                                    <label asp-for="Email" class="form-label fw-semibold">Email (приглашённый)</label>
+                                    <input asp-for="Email" class="form-control" placeholder="ivanov@example.com">
+                                    <input type="text" class="form-control" value="@Model.Email" readonly disabled />
+                                    <div class="form-text text-info">Этот email был указан при создании приглашения</div>
+                                    <span asp-validation-for="Email" class="text-danger"></span>
+                                </div>
+
+                                <!-- Телефон -->
+                                <div class="mb-3">
+                                    <label asp-for="Phone" class="form-label fw-semibold"></label>
+                                    <input asp-for="Phone" class="form-control" placeholder="Москва">
+                                    <span asp-validation-for="Phone" class="text-danger"></span>
+                                </div>
+
+                                <!-- Отдел (выпадающий список)-->
+                                <div class="mb-3">
+                                    <label asp-for="Department" class="form-label fw-semibold"></label>
+                                    <select asp-for="Department" class="form-select">
+                                        <option value="">-- Выберите отдел --</option>
+                                        <option value="Отдел дополнительного образования">Доп.Образование</option>
+                                        <option value="Методический отдел">Методический отдел</option>
+                                        <option value="">-- Учебная часть --</option>
+                                        <option value="кафедра 1">кафедра 1</option>
+                                        <option value="кафедра 2">кафедра 2</option>
+                                        <option value="кафедра 3">кафедра 3</option>
+                                    </select>
+                                    <span asp-validation-for="Department" class="text-danger"></span>
+                                </div>
+
+                                <!-- Кнопка отправки -->
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        Зарегистрироваться
+                                    </button>
+                                </div>
+                            </form>
+
+                            <footer class="text-center mt-4">
+                                <small class="text-muted">
+                                    Нажимая «Зарегистрироваться», вы даёте согласие на обработку персональных данных.
+                                </small>
+                            </footer>
+
+                        </div>
+                    </section>
+                </article>
+
+            </div>
+        </div>
+    </main>
+
+    @section Scripts {
+
+        <script>
+                // Показ/скрытие пароля
+                const showPasswordCheckbox = document.getElementById('showPasswordCheckbox');
+                const passwordInput = document.getElementById('password');
+
+                showPasswordCheckbox.addEventListener('change', function() {
+                    passwordInput.type = this.checked ? 'text' : 'password';
+                });
+
+                // Показ/скрытие подтверждения пароля
+                const showConfirmCheckbox = document.getElementById('showConfirmPasswordCheckbox');
+                const confirmInput = document.getElementById('confirmPassword');
+
+                showConfirmCheckbox.addEventListener('change', function() {
+                    confirmInput.type = this.checked ? 'text' : 'password';
+                });
+
+                
+
+                // Проверка перед отправкой формы
+                document.querySelector('form').addEventListener('submit', function(e) {
+                    var token = document.querySelector('input[name="InviteToken"]').value;
+
+                    if (!token || token === '') {
+                        e.preventDefault();
+                        alert('Ошибка: токен приглашения отсутствует. Пожалуйста, перейдите по ссылке из письма заново.');
+                        return false;
+                    }
+                });
+        </script>
+
+    }
+
+</body>
+

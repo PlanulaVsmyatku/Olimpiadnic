@@ -1,7 +1,11 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Olimpiadnic.Data;
 using Olimpiadnic.Models.OlympiadModels;
 using Olimpiadnic.Models.RoleModels;
+using Olimpiadnic.Services;
 using System.Security.Claims;
 
 namespace Olimpiadnic.Controllers
@@ -10,77 +14,116 @@ namespace Olimpiadnic.Controllers
     public class ProfileController : Controller
     {
         private readonly ILogger<ProfileController> _logger;
+        private readonly AppDbContext _context;
+        private readonly IPasswordService _passwordService;
 
-        public ProfileController(ILogger<ProfileController> logger)
+        public ProfileController(
+            ILogger<ProfileController> logger,
+            AppDbContext context,
+            IPasswordService passwordService)
         {
             _logger = logger;
+            _context = context;
+            _passwordService = passwordService;
         }
 
-        // GET: /Dashboard/Profile (страница по умолчанию в личном кабинете)
+        // GET: /Profile/Profile (страница по умолчанию в личном кабинете)
         [HttpGet]
         public async Task<IActionResult> Profile()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var role = User.FindFirstValue(ClaimTypes.Role) ?? UserRoles.Participant;
+            var role = User.FindFirstValue(ClaimTypes.Role) ?? UserRoles.participant;
             
-            // TODO: Загрузить данные пользователя из БД
-            var profile = await GetUserProfile(int.Parse(userId));
+            // Данные уже загружены в DTO на этапе входа и теперь в claims
+            var profile = await GetUserProfile();
             
             ViewBag.UserRole = role;
+            ViewBag.UserID = userId;
             return View(profile);
         }
 
-        // GET: /Dashboard/EditProfile
-        [HttpGet]
-        public async Task<IActionResult> EditProfile()
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var profile = await GetUserProfile(int.Parse(userId));
-            
-            var editModel = new EditProfileViewModel
-            {
-                Login = profile.Login,
-                FullName = profile.FullName,
-                Email = profile.Email,
-                PhoneNumber = profile.PhoneNumber,
-                EducationalInstitution = profile.EducationalInstitution,
-                EducationLevel = profile.EducationLevel,
-                Position = profile.Position
-            };
-            
-            return View(editModel);
-        }
-
-        // POST: /Dashboard/EditProfile
+        // POST: /Profile/UpdateProfile
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditProfile(EditProfileViewModel model)
+        public async Task<IActionResult> UpdateProfile([FromForm] UserProfileViewModel model)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return View(model);
-            }
+                var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+                var role = User.FindFirstValue(ClaimTypes.Role) ?? UserRoles.participant;
 
-            // TODO: Сохранить изменения в БД
-            
-            TempData["SuccessMessage"] = "Профиль успешно обновлён!";
-            return RedirectToAction(nameof(Profile));
+                // Получаем пользователя и его профиль из БД
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+                var userProfile = await _context.UserProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
+
+                if (user == null || userProfile == null)
+                {
+                    return Json(new { success = false, message = "Пользователь не найден" });
+                }
+
+                // Обновляем общие поля
+                userProfile.FullName = model.FullName;
+                userProfile.Email = model.Email;
+
+                // Обновляем поля в зависимости от роли
+                switch (role)
+                {
+                    case "participant":
+                        var participantModel = model as ParticipantProfileViewModel;
+                        if (participantModel != null)
+                        {
+                            userProfile.City = participantModel.City;
+                            userProfile.PositionGrade = participantModel.EducationLevel;
+                            userProfile.Kurator = participantModel.Curator;
+                            userProfile.Organisation = participantModel.EducationalInstitution;
+                        }
+                        break;
+
+                    case "staff":
+                        var staffModel = model as StaffProfileViewModel;
+                        if (staffModel != null)
+                        {
+                            userProfile.Phone = staffModel.PhoneNumber;
+                            userProfile.City = staffModel.City;
+                            userProfile.PositionGrade = staffModel.Departament;
+                            userProfile.Organisation = staffModel.EducationalInstitution;
+                        }
+                        break;
+
+                    case "admin":
+                        // Админ не имеет дополнительных полей для обновления
+                        break;
+                }
+
+                await _context.SaveChangesAsync();
+
+                // Обновляем claims пользователя
+                await UpdateUserClaims(userId);
+
+                return Json(new { success = true, message = "Профиль успешно обновлён" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating profile");
+                return Json(new { success = false, message = "Произошла ошибка при обновлении профиля" });
+            }
         }
 
-        // GET: /Dashboard/MyOlympiads (для участника - записанные, для сотрудника - созданные)
+        // GET: /Profile/MyOlympiads (для участника - записанные, для сотрудника - созданные)
+        /*
         [HttpGet]
         public async Task<IActionResult> MyOlympiads()
         {
-            var role = User.FindFirstValue(ClaimTypes.Role) ?? UserRoles.Participant;
+            var role = User.FindFirstValue(ClaimTypes.Role) ?? UserRoles.participant;
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
             
-            if (role == UserRoles.Participant)
+            if (role == UserRoles.participant)
             {
                 var enrolledOlympiads = await GetEnrolledOlympiads(userId);
                 ViewBag.Role = "Participant";
                 return View("MyOlympiads_Participant", enrolledOlympiads);
             }
-            else if (role == UserRoles.Staff || role == UserRoles.Admin)
+            else if (role == UserRoles.staff || role == UserRoles.admin)
             {
                 var createdOlympiads = await GetCreatedOlympiads(userId);
                 ViewBag.Role = "Staff";
@@ -90,7 +133,7 @@ namespace Olimpiadnic.Controllers
             return RedirectToAction(nameof(Profile));
         }
 
-        // GET: /Dashboard/CompletedOlympiads (только для участника)
+        // GET: /Profile/CompletedOlympiads (только для участника)
         [HttpGet]
         public async Task<IActionResult> CompletedOlympiads()
         {
@@ -100,7 +143,7 @@ namespace Olimpiadnic.Controllers
         }
 
 
-        // GET: /Dashboard/GetParticipantResults (для модального окна)
+        // GET: /Profile/GetParticipantResults (для модального окна)
         [HttpGet]
         public async Task<IActionResult> GetParticipantResults(int participantId, int olympiadId)
         {
@@ -109,7 +152,7 @@ namespace Olimpiadnic.Controllers
             return PartialView("_ParticipantResultsModal", results);
         }
 
-        // GET: /Dashboard/GetOlympiadParticipants (для сотрудника)
+        // GET: /Profile/GetOlympiadParticipants (для сотрудника)
         [HttpGet]
         public async Task<IActionResult> GetOlympiadParticipants(int olympiadId)
         {
@@ -117,7 +160,7 @@ namespace Olimpiadnic.Controllers
             return PartialView("_OlympiadParticipantsModal", participants);
         }
 
-        // POST: /Dashboard/RequestDeleteOlympiad (для сотрудника)
+        // POST: /Profile/RequestDeleteOlympiad (для сотрудника)
         [HttpPost]
         public async Task<IActionResult> RequestDeleteOlympiad(int olympiadId)
         {
@@ -125,166 +168,111 @@ namespace Olimpiadnic.Controllers
             TempData["SuccessMessage"] = "Запрос на удаление отправлен администратору";
             return RedirectToAction(nameof(MyOlympiads));
         }
+        */
+        #region Вспомогательные методы
 
-        #region Вспомогательные методы (заглушки для БД)
-
-        private async Task<UserProfileViewModel> GetUserProfile(int userId)
+        private async Task<UserProfileViewModel> GetUserProfile()
         {
-            await Task.Delay(1);
-            var role = User.FindFirstValue(ClaimTypes.Role) ?? UserRoles.Participant;
-            
-            return new UserProfileViewModel
+            var role = User.FindFirstValue(ClaimTypes.Role) ?? "participant";
+
+            UserProfileViewModel UserProfile = role switch
             {
-                Login = "ivanov_ivan",
-                FullName = "Иванов Иван Иванович",
-                Email = "ivanov@example.com",
-                PhoneNumber = "+7 (123) 456-78-90",
-                EducationalInstitution = "МГУ им. Ломоносова",
-                EducationLevel = role == UserRoles.Participant ? "Высшее" : null,
-                Position = role != UserRoles.Participant ? "Старший преподаватель" : null,
-                IsActive = true,
-                Role = role
+                "participant" => new ParticipantProfileViewModel
+                {
+                    Login = User.FindFirstValue(ClaimTypes.Name),
+                    FullName = User.FindFirstValue("FullName"),
+                    Role = role,
+                    Email = User.FindFirstValue(ClaimTypes.Email),
+                    EducationLevel = User.FindFirstValue("EducationLevel"),
+                    City = User.FindFirstValue("City"),
+                    EducationalInstitution = User.FindFirstValue("EducationalInstitution"),
+                    Curator = User.FindFirstValue("Curator"),
+                    IsActive = bool.TryParse(User.FindFirstValue("IsActivated"), out bool isActive) && isActive
+                },
+
+                "staff" => new StaffProfileViewModel
+                {
+                    Login = User.FindFirstValue(ClaimTypes.Name),
+                    FullName = User.FindFirstValue("FullName"),
+                    Role = role,
+                    Email = User.FindFirstValue(ClaimTypes.Email),
+                    PhoneNumber = User.FindFirstValue("Phone") ?? "",
+                    City = User.FindFirstValue("City") ?? "",
+                    EducationalInstitution = User.FindFirstValue("EducationalInstitution") ?? "",
+                    Departament = User.FindFirstValue("Departament") ?? User.FindFirstValue("Department") ?? ""
+                },
+
+                "admin" => new AdminProfileViewModel
+                {
+                    Login = User.FindFirstValue(ClaimTypes.Name),
+                    FullName = User.FindFirstValue("FullName"),
+                    Email = User.FindFirstValue(ClaimTypes.Email),
+                    Role = role
+                },
+
+                _ => throw new ArgumentException($"Неизвестная роль: {role}")
             };
+
+            return UserProfile;
         }
 
-        private async Task<List<OlympiadCardViewModel>> GetEnrolledOlympiads(int userId)
+        private async Task UpdateUserClaims(int userId)
         {
-            await Task.Delay(1);
-            return new List<OlympiadCardViewModel>
+            // Получаем свежие данные из БД
+            var user = await _context.Users
+                .Include(u => u.UserProfile)
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
+                .FirstOrDefaultAsync(u => u.UserId == userId);
+
+            if (user == null) return;
+
+            var userProfile = user.UserProfile;
+            var role = user.UserRoles?.FirstOrDefault()?.Role?.Name ?? "participant";
+
+            // Создаём новые claims
+            var claims = new List<Claim>
             {
-                new OlympiadCardViewModel
-                {
-                    OlympiadId = 1,
-                    Title = "Олимпиада по математике",
-                    Description = "Международная олимпиада по математике для школьников 9-11 классов",
-                    ImageUrl = "/images/math-olympiad.jpg",
-                    EventStart = new DateTime(2025, 5, 15, 10, 0, 0),
-                    EventEnd = new DateTime(2025, 5, 20, 18, 0, 0),
-                    RegistOpen = DateTime.Now.AddDays(-10),
-                    RegistClosed = DateTime.Now.AddDays(5),
-                    Status = "Регистрация открыта",
-                    IsUserRegistered = true
-                },
-                new OlympiadCardViewModel
-                {
-                    OlympiadId = 2,
-                    Title = "Олимпиада по программированию",
-                    Description = "Всероссийская олимпиада по программированию",
-                    ImageUrl = "/images/programming-olympiad.jpg",
-                    EventStart = new DateTime(2025, 6, 10, 9, 0, 0),
-                    EventEnd = new DateTime(2025, 6, 15, 20, 0, 0),
-                    RegistOpen = DateTime.Now.AddDays(-5),
-                    RegistClosed = DateTime.Now.AddDays(10),
-                    Status = "Регистрация открыта",
-                    IsUserRegistered = true
-                }
+                new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+                new Claim(ClaimTypes.Name, user.Login),
+                new Claim("FullName", userProfile?.FullName ?? ""),
+                new Claim(ClaimTypes.Role, role),
+                new Claim(ClaimTypes.Email, userProfile?.Email ?? "")
             };
-        }
 
-        private async Task<List<StaffOlympiadCardViewModel>> GetCreatedOlympiads(int userId)
-        {
-            await Task.Delay(1);
-            return new List<StaffOlympiadCardViewModel>
+            // Добавляем специфичные claims в зависимости от роли
+            if (role == "participant" && userProfile != null)
             {
-                new StaffOlympiadCardViewModel
-                {
-                    OlympiadId = 1,
-                    Title = "Олимпиада по программированию",
-                    Description = "Всероссийская олимпиада по программированию 2025",
-                    ImageUrl = "/images/programming-olympiad.jpg",
-                    EventStart = new DateTime(2025, 6, 10, 9, 0, 0),
-                    EventEnd = new DateTime(2025, 6, 15, 20, 0, 0),
-                    ParticipantsCount = 45,
-                    PendingManualChecks = 12
-                },
-                new StaffOlympiadCardViewModel
-                {
-                    OlympiadId = 2,
-                    Title = "Олимпиада по физике",
-                    Description = "Региональная олимпиада по физике",
-                    ImageUrl = "/images/physics-olympiad.jpg",
-                    EventStart = new DateTime(2025, 7, 20, 10, 0, 0),
-                    EventEnd = new DateTime(2025, 7, 25, 18, 0, 0),
-                    ParticipantsCount = 28,
-                    PendingManualChecks = 5
-                }
-            };
-        }
-
-        private async Task<List<CompletedOlympiadViewModel>> GetCompletedOlympiads(int userId)
-        {
-            await Task.Delay(1);
-            return new List<CompletedOlympiadViewModel>
+                claims.Add(new Claim("EducationLevel", userProfile.PositionGrade ?? ""));
+                claims.Add(new Claim("City", userProfile.City ?? ""));
+                claims.Add(new Claim("EducationalInstitution", userProfile.Organisation ?? ""));
+                claims.Add(new Claim("Curator", userProfile.Kurator ?? ""));
+                claims.Add(new Claim("IsActivated", user.IsActivated.ToString()));
+            }
+            else if (role == "staff" && userProfile != null)
             {
-                new CompletedOlympiadViewModel
-                {
-                    OlympiadId = 1,
-                    Title = "Олимпиада по математике (весенняя)",
-                    CompletedAt = new DateTime(2025, 3, 20),
-                    TotalScore = 85,
-                    MaxScore = 100
-                },
-                new CompletedOlympiadViewModel
-                {
-                    OlympiadId = 2,
-                    Title = "Олимпиада по информатике",
-                    CompletedAt = new DateTime(2025, 2, 15),
-                    TotalScore = 92,
-                    MaxScore = 100
-                }
-            };
+                claims.Add(new Claim("Phone", userProfile.Phone ?? ""));
+                claims.Add(new Claim("City", userProfile.City ?? ""));
+                claims.Add(new Claim("EducationalInstitution", userProfile.Organisation ?? ""));
+                claims.Add(new Claim("Departament", userProfile.PositionGrade ?? ""));
+            }
+
+            // Обновляем аутентификацию
+            await HttpContext.SignOutAsync();
+            var claimsIdentity = new ClaimsIdentity(claims, "Cookies");
+            await HttpContext.SignInAsync(new ClaimsPrincipal(claimsIdentity));
         }
 
-
-        private async Task<object> GetParticipantResultsFromDb(int participantId, int olympiadId)
+        private string GetRoleDisplayName(string role)
         {
-            await Task.Delay(1);
-            return new 
-            { 
-                ParticipantName = "Иванов Иван Иванович", 
-                Score = 85, 
-                MaxScore = 100, 
-                Details = new List<object>
-                {
-                    new { Question = "Вопрос 1", Score = 25, MaxScore = 25, IsCorrect = true },
-                    new { Question = "Вопрос 2", Score = 20, MaxScore = 25, IsCorrect = false },
-                    new { Question = "Вопрос 3 (развёрнутый)", Score = 40, MaxScore = 50, IsCorrect = true }
-                }
-            };
-        }
-
-        private async Task<List<ParticipantResultViewModel>> GetOlympiadParticipantsFromDb(int olympiadId)
-        {
-            await Task.Delay(1);
-            return new List<ParticipantResultViewModel>
+            return role switch
             {
-                new ParticipantResultViewModel
-                {
-                    ParticipantId = 1,
-                    ParticipantName = "Иванов Иван Иванович",
-                    ParticipantLogin = "ivanov_ivan",
-                    Score = 85,
-                    Status = "Завершено"
-                },
-                new ParticipantResultViewModel
-                {
-                    ParticipantId = 2,
-                    ParticipantName = "Петрова Мария Сергеевна",
-                    ParticipantLogin = "petrova_m",
-                    Score = null,
-                    Status = "В процессе"
-                },
-                new ParticipantResultViewModel
-                {
-                    ParticipantId = 3,
-                    ParticipantName = "Сидоров Алексей Дмитриевич",
-                    ParticipantLogin = "sidorov_a",
-                    Score = 92,
-                    Status = "Завершено"
-                }
+                "participant" => "Участник",
+                "staff" => "Сотрудник",
+                "admin" => "Администратор",
+                _ => "Роль?"
             };
         }
-
         #endregion
     }
 }
