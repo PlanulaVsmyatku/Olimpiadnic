@@ -12,206 +12,236 @@
 <html>
 <head>
     <style>
-        .olympiad-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px 0;
-            margin-bottom: 30px;
-            border-radius: 0 0 20px 20px;
-        }
-        
-        .olympiad-image {
-            width: 100%;
-            height: 300px;
-            object-fit: cover;
-            border-radius: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .info-card {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        
-        .info-item {
-            display: flex;
-            padding: 10px 0;
-            border-bottom: 1px solid #e9ecef;
-        }
-        
-        .info-label {
-            width: 140px;
-            font-weight: 600;
-            color: #495057;
-        }
-        
-        .info-value {
-            flex: 1;
-            color: #6c757d;
-        }
-        
-        .status-badge {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-        
-        .status-available { background: #d4edda; color: #155724; }
-        .status-in_progress { background: #cfe2ff; color: #084298; }
-        .status-ended { background: #f8d7da; color: #721c24; }
-        
-        .btn-participate {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 30px;
-            border-radius: 30px;
-            font-weight: 600;
-            border: none;
-        }
-        
-        .btn-participate:hover {
-            opacity: 0.9;
-            color: white;
-        }
-        
-        .description-content {
-            line-height: 1.8;
-        }
-        
-        .description-content ul {
-            padding-left: 20px;
-        }
-        
-        .description-content li {
-            margin-bottom: 8px;
-        }
+            .olympiad-header {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 40px 0;
+                margin-bottom: 30px;
+                border-radius: 0 0 20px 20px;
+            }
+
+            .olympiad-image {
+                width: 100%;
+                height: 300px;
+                object-fit: cover;
+                border-radius: 15px;
+                margin-bottom: 20px;
+            }
+
+            .info-card {
+                background: white;
+                border-radius: 15px;
+                padding: 20px;
+                margin-bottom: 20px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            }
+
+            .info-item {
+                display: flex;
+                padding: 10px 0;
+                border-bottom: 1px solid #e9ecef;
+            }
+
+            .info-label {
+                width: 140px;
+                font-weight: 600;
+                color: #495057;
+            }
+
+            .info-value {
+                flex: 1;
+                color: #6c757d;
+            }
+
+            .status-badge {
+                display: inline-block;
+                padding: 5px 12px;
+                border-radius: 20px;
+                font-size: 0.85rem;
+                font-weight: 600;
+            }
+
+            .status-available {
+                background: #d4edda;
+                color: #155724;
+            }
+
+            .status-in_progress {
+                background: #cfe2ff;
+                color: #084298;
+            }
+
+            .status-ended {
+                background: #f8d7da;
+                color: #721c24;
+            }
+
+            .btn-participate {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 12px 30px;
+                border-radius: 30px;
+                font-weight: 600;
+                border: none;
+            }
+
+                .btn-participate:hover {
+                    opacity: 0.9;
+                    color: white;
+                }
+
+            .description-content {
+                line-height: 1.8;
+            }
+
+                .description-content ul {
+                    padding-left: 20px;
+                }
+
+                .description-content li {
+                    margin-bottom: 8px;
+                }
+
+            .section-title {
+                font-size: 1.25rem;
+                font-weight: 600;
+                margin-bottom: 15px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid #667eea;
+                display: inline-block;
+            }
+
+            .credentials-section {
+                margin-top: 20px;
+                padding-top: 20px;
+                border-top: 1px solid #e9ecef;
+            }
+
+                .credentials-section h5 {
+                    color: #667eea;
+                    margin-bottom: 10px;
+                }
     </style>
 </head>
 <body>
 
-<!-- Hero секция -->
-<div class="olympiad-header">
+    <!-- Hero секция -->
+    <div class="olympiad-header">
+        <div class="container">
+            <h1 class="display-4 fw-bold">@Model.Title</h1>
+            <p class="lead">Проверьте свои знания и получите сертификат</p>
+        </div>
+    </div>
+
     <div class="container">
-        <h1 class="display-4 fw-bold">@Model.Title</h1>
-        <p class="lead">Проверьте свои знания и получите сертификат</p>
-    </div>
-</div>
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Изображение -->
+                @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                {
+                    <img src="@Model.ImageUrl" class="olympiad-image" alt="@Model.Title" />
+                }
 
-<div class="container">
-    <div class="row">
-        <div class="col-lg-8">
-            <!-- Изображение -->
-            @if (!string.IsNullOrEmpty(Model.ImageUrl))
-            {
-                <img src="@Model.ImageUrl" class="olympiad-image" alt="@Model.Title" />
-            }
-            
-            <!-- Описание -->
-            <div class="info-card">
-                <h4><i class="fas fa-align-left me-2"></i>Описание олимпиады</h4>
-                <div class="description-content">
-                    @Html.Raw(Model.Description)
-                </div>
-            </div>
-            
-            <!-- Критерии допуска -->
-            @if (!string.IsNullOrEmpty(Model.Credentials))
-            {
+                <!-- Один белый блок для описания и критериев -->
                 <div class="info-card">
-                    <h4><i class="fas fa-clipboard-list me-2"></i>Критерии допуска</h4>
-                    <p>@Model.Credentials</p>
-                </div>
-            }
-        </div>
-        
-        <div class="col-lg-4">
-            <!-- Информационная карточка -->
-            <div class="info-card">
-                <h4><i class="fas fa-info-circle me-2"></i>Информация</h4>
-                
-                <div class="info-item">
-                    <div class="info-label"><i class="fas fa-tag me-2"></i>Статус</div>
-                    <div class="info-value">
-                        <span class="status-badge status-@Model.Status">
-                            @(Model.Status == "available" ? "Доступна" : 
-                              Model.Status == "in_progress" ? "В процессе" : "Завершена")
-                        </span>
+                    <h4><i class="fas fa-align-left me-2"></i>Описание олимпиады</h4>
+                    <div class="description-content">
+                        @Html.Raw(Model.Description)
                     </div>
-                </div>
-                
-                <div class="info-item">
-                    <div class="info-label"><i class="fas fa-calendar-alt me-2"></i>Начало</div>
-                    <div class="info-value">@Model.EventStart.ToString("dd.MM.yyyy HH:mm")</div>
-                </div>
-                
-                <div class="info-item">
-                    <div class="info-label"><i class="fas fa-calendar-check me-2"></i>Окончание</div>
-                    <div class="info-value">@Model.EventEnd.ToString("dd.MM.yyyy HH:mm")</div>
-                </div>
-                
-                <div class="info-item">
-                    <div class="info-label"><i class="fas fa-clock me-2"></i>Регистрация</div>
-                    <div class="info-value">
-                        @Model.RegistOpen.ToString("dd.MM.yyyy") - @Model.RegistClosed.ToString("dd.MM.yyyy")
-                    </div>
-                </div>
-                
-                <div class="info-item">
-                    <div class="info-label"><i class="fas fa-question-circle me-2"></i>Всего вопросов</div>
-                    <div class="info-value">@Model.TotalQuestions</div>
+
+                    @if (!string.IsNullOrEmpty(Model.Credentials))
+                    {
+                        <div class="credentials-section">
+                            <h5><i class="fas fa-clipboard-list me-2"></i>Критерии допуска</h5>
+                            <p class="mb-0">@Model.Credentials</p>
+                        </div>
+                    }
                 </div>
             </div>
-            
-            <!-- Кнопка действия -->
-            <div class="info-card text-center">
-                @if (Model.IsRegistered)
-                {
-                    <button class="btn-participate" onclick="location.href='/Olympiad/Participate/@Model.OlympiadId'">
-                        <i class="fas fa-play me-2"></i>Продолжить участие
-                    </button>
-                }
-                else if (canRegister)
-                {
-                    <button class="btn-participate" onclick="registerForOlympiad(@Model.OlympiadId)">
-                        <i class="fas fa-pen-alt me-2"></i>Записаться на олимпиаду
-                    </button>
-                }
-                else if (now < Model.RegistOpen)
-                {
-                    <button class="btn-participate" disabled style="opacity: 0.6">
-                        <i class="fas fa-clock me-2"></i>Регистрация откроется @Model.RegistOpen.ToString("dd.MM.yyyy")
-                    </button>
-                }
-                else
-                {
-                    <button class="btn-participate" disabled style="opacity: 0.6">
-                        <i class="fas fa-ban me-2"></i>Регистрация закрыта
-                    </button>
-                }
+
+            <div class="col-lg-4">
+                <!-- Информационная карточка -->
+                <div class="info-card">
+                    <h4><i class="fas fa-info-circle me-2"></i>Информация</h4>
+
+                    <div class="info-item">
+                        <div class="info-label"><i class="fas fa-tag me-2"></i>Статус</div>
+                        <div class="info-value">
+                            <span class="status-badge status-@Model.Status">
+                                @(Model.Status == "available" ? "Доступна" :
+                                  Model.Status == "in_progress" ? "В процессе" : "Завершена")
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-label"><i class="fas fa-calendar-alt me-2"></i>Начало</div>
+                        <div class="info-value">@Model.EventStart.ToString("dd.MM.yyyy HH:mm")</div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-label"><i class="fas fa-calendar-check me-2"></i>Окончание</div>
+                        <div class="info-value">@Model.EventEnd.ToString("dd.MM.yyyy HH:mm")</div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-label"><i class="fas fa-clock me-2"></i>Регистрация</div>
+                        <div class="info-value">
+                            @Model.RegistOpen.ToString("dd.MM.yyyy") - @Model.RegistClosed.ToString("dd.MM.yyyy")
+                        </div>
+                    </div>
+
+                    <div class="info-item">
+                        <div class="info-label"><i class="fas fa-question-circle me-2"></i>Всего вопросов</div>
+                        <div class="info-value">@Model.TotalQuestions</div>
+                    </div>
+                </div>
+
+                <!-- Кнопка действия -->
+                <div class="info-card text-center">
+                    @if (Model.IsRegistered)
+                    {
+                        <button class="btn-participate" onclick="location.href='/Olympiad/Participate/@Model.OlympiadId'">
+                            <i class="fas fa-play me-2"></i>Продолжить участие
+                        </button>
+                    }
+                    else if (canRegister)
+                    {
+                        <button class="btn-participate" onclick="registerForOlympiad(@Model.OlympiadId)">
+                            <i class="fas fa-pen-alt me-2"></i>Записаться на олимпиаду
+                        </button>
+                    }
+                    else if (now < Model.RegistOpen)
+                    {
+                        <button class="btn-participate" disabled style="opacity: 0.6">
+                            <i class="fas fa-clock me-2"></i>Регистрация откроется @Model.RegistOpen.ToString("dd.MM.yyyy")
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn-participate" disabled style="opacity: 0.6">
+                            <i class="fas fa-ban me-2"></i>Регистрация закрыта
+                        </button>
+                    }
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<script>
-    function registerForOlympiad(olympiadId) {
-        fetch(`/Olympiad/Register/${olympiadId}`, { method: 'POST' })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Вы успешно записаны!');
-                    location.reload();
-                } else {
-                    alert(data.message || 'Ошибка при записи');
-                }
-            });
-    }
-</script>
+    <script>
+            function registerForOlympiad(olympiadId) {
+                fetch(`/Olympiad/Register/${olympiadId}`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Вы успешно записаны!');
+                            location.reload();
+                        } else {
+                            alert(data.message || 'Ошибка при записи');
+                        }
+                    });
+            }
+    </script>
 
 </body>
 </html>
