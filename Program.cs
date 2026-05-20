@@ -81,5 +81,9 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
+app.MapControllerRoute(
+    name: "olympiad_details",
+    pattern: "Olympiad/Details/{id}",
+    defaults: new { controller = "Olympiad", action = "Details" });
 
 app.Run();

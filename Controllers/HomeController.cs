@@ -185,64 +185,6 @@ namespace Olimpiadnic.Controllers
 
         #region Вспомогательные методы
 
-        private List<OlympiadCardViewModel> GetMockOlympiads()
-        {
-            return new List<OlympiadCardViewModel>
-            {
-                new OlympiadCardViewModel
-                {
-                    OlympiadId = 1,
-                    Title = "Олимпиада по математике",
-                    Description = "Международная олимпиада по математике для школьников 9-11 классов. Участников ждут интересные задачи и ценные призы.",
-                    ImageUrl = "/images/math-olympiad.jpg",
-                    EventStart = new DateTime(2026, 5, 15, 10, 0, 0),
-                    EventEnd = new DateTime(2026, 5, 20, 18, 0, 0),
-                    RegistOpen = new DateTime(2026, 5, 1, 0, 0, 0),
-                    RegistClosed = new DateTime(2026, 5, 13, 23, 59, 0),
-                    Status = "Регистрация открыта",
-                    IsUserRegistered = false
-                },
-                new OlympiadCardViewModel
-                {
-                    OlympiadId = 2,
-                    Title = "Олимпиада по программированию",
-                    Description = "Всероссийская олимпиада по программированию и алгоритмам. Решайте реальные задачи от ведущих IT-компаний.",
-                    ImageUrl = "/images/programming-olympiad.jpg",
-                    EventStart = new DateTime(2026, 5, 11, 9, 0, 0),
-                    EventEnd = new DateTime(2026, 5, 15, 20, 0, 0),
-                    RegistOpen = new DateTime(2026, 4, 1, 0, 0, 0),
-                    RegistClosed = new DateTime(2026, 5, 5, 23, 59, 0),
-                    Status = "Завершена",
-                    IsUserRegistered = false
-                },
-                new OlympiadCardViewModel
-                {
-                    OlympiadId = 3,
-                    Title = "Олимпиада по физике",
-                    Description = "Региональная олимпиада по физике для 10-11 классов. Проверьте свои знания в области точных наук.",
-                    ImageUrl = "/images/physics-olympiad.jpg",
-                    EventStart = new DateTime(2026, 3, 20, 10, 0, 0),
-                    EventEnd = new DateTime(2026, 3, 25, 18, 0, 0),
-                    RegistOpen = new DateTime(2026, 2, 15, 0, 0, 0),
-                    RegistClosed = new DateTime(2026, 3, 15, 23, 59, 0),
-                    Status = "Завершена",
-                    IsUserRegistered = true
-                },
-                new OlympiadCardViewModel
-                {
-                    OlympiadId = 4,
-                    Title = "Олимпиада по информатике",
-                    Description = "Открытая олимпиада по информатике и ИТ. Идеально подходит для начинающих и опытных программистов.",
-                    ImageUrl = "/images/informatics-olympiad.jpg",
-                    EventStart = new DateTime(2026, 6, 5, 11, 0, 0),
-                    EventEnd = new DateTime(2026, 6, 10, 19, 0, 0),
-                    RegistOpen = new DateTime(2026, 5, 22, 0, 0, 0),
-                    RegistClosed = new DateTime(2026, 6, 1, 23, 59, 0),
-                    Status = "Регистрация скоро",
-                    IsUserRegistered = false
-                }
-            };
-        }
 
         #endregion
     }

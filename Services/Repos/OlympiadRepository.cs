@@ -163,6 +163,20 @@ namespace Olimpiadnic.Services.Repos
             return "Скоро";
         }
 
+        public async Task<Olympiad?> GetOlympiadWithDetailsAsync(int olympId)
+        {
+            return await _context.Olympiads
+                .Include(o => o.Questions.Where(q => q.IsActual))
+                .FirstOrDefaultAsync(o => o.OlympId == olympId);
+        }
+
+        public async Task<int> GetTotalQuestionsCountAsync(int olympId)
+        {
+            return await _context.Questions
+                .Where(q => q.OlympId == olympId && q.IsActual)
+                .CountAsync();
+        }
+
         #endregion
 
         #region Участники

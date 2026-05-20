@@ -180,6 +180,14 @@
                                             </div>
                                         }
 
+                                        <!-- Ссылка на детальную страницу -->
+                                        <div class="mb-3">
+                                            <a href="@Url.Action("Details", "Olympiad", new { id = olympiad.OlympiadId })"
+                                               class="text-decoration-none">
+                                                <i class="fas fa-info-circle me-1"></i>Подробнее...
+                                            </a>
+                                        </div>
+
                                         <div class="mt-auto">
                                             <div class="date-info">
                                                 <i class="fas fa-calendar-alt"></i>
