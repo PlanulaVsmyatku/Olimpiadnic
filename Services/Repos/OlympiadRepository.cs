@@ -282,15 +282,23 @@ namespace Olimpiadnic.Services.Repos
             return participant;
         }
 
+        public async Task<List<QuestionAttachment>> GetQuestionAttachmentsAsync(int questionId)
+        {
+            return await _context.QuestionAttachments
+                .Where(a => a.QuestId == questionId)
+                .OrderBy(a => a.SortOrder)
+                .ToListAsync();
+        }
+
         #endregion
-        /*
+
         #region Снапшоты
 
         public async Task<QuestionsSnapshot?> GetQuestionSnapshotByOriginalIdAsync(int olympiadId, int originalQuestionId)
         {
             // Сначала получаем снимок олимпиады
             var olympiadSnapshot = await _context.OlympiadSnapshots
-                .FirstOrDefaultAsync(os => os.OlympId == olympiadId);
+                .FirstOrDefaultAsync(os => os.OriginalOlympId == olympiadId);
 
             if (olympiadSnapshot == null) return null;
 
@@ -303,7 +311,7 @@ namespace Olimpiadnic.Services.Repos
         public async Task<List<QuestionsSnapshot>> GetQuestionSnapshotsByOlympiadIdAsync(int olympiadId)
         {
             var olympiadSnapshot = await _context.OlympiadSnapshots
-                .FirstOrDefaultAsync(os => os.OlympId == olympiadId);
+                .FirstOrDefaultAsync(os => os.OriginalOlympId == olympiadId);
 
             if (olympiadSnapshot == null) return new List<QuestionsSnapshot>();
 
@@ -327,97 +335,97 @@ namespace Olimpiadnic.Services.Repos
                 .FirstOrDefaultAsync(m => m.QuestSnapshotId == questionSnapshotId);
         }
 
+        public async Task<QuestionsSnapshot?> GetQuestionSnapshotByIdAsync(int questionSnapshotId)
+        {
+            return await _context.QuestionsSnapshots
+                .FirstOrDefaultAsync(qs => qs.QuestSnapshotId == questionSnapshotId);
+        }
+
         #endregion
-        /*
+
         #region Сохранение ответов
-        
+
         public async Task SaveAnswerSubmissionAsync(int participantId, int questionSnapshotId, object answerData)
         {
-            // Проверяем, есть ли уже запись для этого вопроса
-            var existingResult = await _context.OlympiadResults
+            // Находим или создаём OlympiadResult
+            var result = await _context.OlympiadResults
                 .Include(r => r.SubmissionItems)
                 .FirstOrDefaultAsync(r => r.ParticipantId == participantId);
 
-            if (existingResult == null)
+            if (result == null)
             {
-                existingResult = new OlympiadResult
+                result = new OlympiadResult
                 {
                     ParticipantId = participantId,
-                    SubmissionItems = new List<SubmissionItem>()
+                    TotalScore = null
                 };
-                _context.OlympiadResults.Add(existingResult);
+                _context.OlympiadResults.Add(result);
                 await _context.SaveChangesAsync();
             }
 
-            // Проверяем, есть ли уже ответ на этот вопрос
-            var existingItem = existingResult.SubmissionItems
+            // Ищем существующий SubmissionItem
+            var existingItem = result.SubmissionItems
                 .FirstOrDefault(si => si.QuestSnapshotId == questionSnapshotId);
 
             if (existingItem != null)
             {
-                // Обновляем существующий ответ
-                if (answerData is List<int> selectedOptionIds)
+                // Обновляем существующий
+                if (answerData is List<int> selectedIds && selectedIds.Any())
                 {
-                    // Auto-вопрос - обновляем AutoSubmissionResult
-                    var autoResult = await _context.AutoSubmissionResults
-                        .FirstOrDefaultAsync(a => a.SubmissionItemId == existingItem.SubmissionItemsId);
-
-                    if (autoResult != null)
+                    // Удаляем старые результаты
+                    if (existingItem.AutoSubmissionResults.Any())
                     {
-                        autoResult.SelectedOptionId = selectedOptionIds.FirstOrDefault(); // Для radio
-                        autoResult.IsCorrect = false; // Пока не проверяем
-                        _context.AutoSubmissionResults.Update(autoResult);
+                        _context.AutoSubmissionResults.RemoveRange(existingItem.AutoSubmissionResults);
                     }
+
+                    // Добавляем новый
+                    _context.AutoSubmissionResults.Add(new AutoSubmissionResult
+                    {
+                        SubmissionItemId = existingItem.SubmissionItemsId,
+                        SelectedOptionId = selectedIds.First(),
+                        IsCorrect = null
+                    });
                 }
                 else if (answerData is string manualAnswer)
                 {
-                    // Manual-вопрос - обновляем ManualSubmissionResult
-                    var manualResult = await _context.ManualSubmissionResults
-                        .FirstOrDefaultAsync(m => m.SubmissionItemId == existingItem.SubmissionItemsId);
-
-                    if (manualResult != null)
+                    if (existingItem.ManualSubmissionResult != null)
                     {
-                        manualResult.AnswerText = manualAnswer;
-                        manualResult.ScoreValue = null; // Пока не проверено
-                        manualResult.Commentary = null;
-                        _context.ManualSubmissionResults.Update(manualResult);
+                        existingItem.ManualSubmissionResult.AnswerText = manualAnswer;
+                        existingItem.ManualSubmissionResult.ScoreValue = null;
+                        existingItem.ManualSubmissionResult.Commentary = null;
                     }
                 }
             }
             else
             {
-                // Создаём новый ответ
-                var submissionItem = new SubmissionItem
+                // Создаём новый
+                var item = new SubmissionItem
                 {
-                    ParticipantId = participantId,
+                    ResultsId = result.ResultsId,  
                     QuestSnapshotId = questionSnapshotId,
                     Type = answerData is List<int> ? "auto" : "manual"
                 };
+                _context.SubmissionItems.Add(item);
+                await _context.SaveChangesAsync();
 
-                _context.SubmissionItems.Add(submissionItem);
-                await _context.SaveChangesAsync(); // Чтобы получить SubmissionItemsId
-
-                if (answerData is List<int> selectedOptionIds)
+                if (answerData is List<int> selectedIds && selectedIds.Any())
                 {
-                    // Для radio берём первый, для checkbox нужно несколько записей
-                    var autoResult = new AutoSubmissionResult
+                    _context.AutoSubmissionResults.Add(new AutoSubmissionResult
                     {
-                        SubmissionItemId = submissionItem.SubmissionItemsId,
-                        SelectedOptionId = selectedOptionIds.FirstOrDefault(),
-                        IsCorrect = false //пока не проверяем - а почему бы сразу не авто-првоерить??
-                    };
-                    _context.AutoSubmissionResults.Add(autoResult);
+                        SubmissionItemId = item.SubmissionItemsId,
+                        SelectedOptionId = selectedIds.First(),
+                        IsCorrect = null
+                    });
                 }
                 else if (answerData is string manualAnswer)
                 {
-                    var manualResult = new ManualSubmissionResult
+                    _context.ManualSubmissionResults.Add(new ManualSubmissionResult
                     {
-                        SubmissionItemId = submissionItem.SubmissionItemsId,
+                        SubmissionItemId = item.SubmissionItemsId,
                         AnswerText = manualAnswer,
                         ScoreValue = null,
                         Commentary = null
-                    };
-                    _context.ManualSubmissionResults.Add(manualResult);
+                    });
                 }
             }
 
@@ -449,6 +457,119 @@ namespace Olimpiadnic.Services.Repos
         }
 
         #endregion
-        */
+
+        #region Результаты участников
+        public async Task<OlympiadResult?> GetParticipantResultAsync(int participantId)
+        {
+            return await _context.OlympiadResults
+                .Include(r => r.SubmissionItems)
+                    .ThenInclude(si => si.AutoSubmissionResults)
+                .Include(r => r.SubmissionItems)
+                    .ThenInclude(si => si.ManualSubmissionResult)
+                .FirstOrDefaultAsync(r => r.ParticipantId == participantId);
+        }
+
+        public async Task<ParticipantResultsViewModel?> GetParticipantResultsForDisplayAsync(int participantId)
+        {
+            var result = await _context.OlympiadResults
+                .Include(r => r.Participant)
+                    .ThenInclude(p => p.User)
+                        .ThenInclude(u => u.UserProfile)
+                .Include(r => r.SubmissionItems)
+                    .ThenInclude(si => si.AutoSubmissionResults)
+                .Include(r => r.SubmissionItems)
+                    .ThenInclude(si => si.ManualSubmissionResult)
+                .Include(r => r.SubmissionItems)
+                    .ThenInclude(si => si.QuestSnapshot)
+                        .ThenInclude(qs => qs.OlympSnap)
+                .FirstOrDefaultAsync(r => r.ParticipantId == participantId);
+
+            if (result == null) return null;
+
+            var viewModel = new ParticipantResultsViewModel
+            {
+                OlympiadId = result.Participant.OlympId,
+                OlympiadTitle = result.Participant.Olymp?.Title ?? "Олимпиада",
+                ParticipantName = result.Participant.User?.UserProfile?.FullName ?? result.Participant.User?.Login ?? "Участник",
+                TotalScore = result.TotalScore ?? 0,
+                MaxPossibleScore = result.SubmissionItems.Sum(si => GetMaxScoreForQuestion(si.QuestSnapshotId)),
+                CompletedAt = result.Participant.CompletedAt,
+                StartedAt = result.Participant.StartedAt,
+                Status = result.Participant.Status,
+                QuestionResults = new List<QuestionResultViewModel>()
+            };
+
+            // Получаем все вопросы (оригиналы) для порядка
+            var questions = await GetQuestionsForParticipationAsync(viewModel.OlympiadId);
+            var questionsDict = questions.ToDictionary(q => q.QuestId);
+
+            foreach (var submissionItem in result.SubmissionItems.OrderBy(s => s.QuestSnapshot.QuestOrderSnapshot))
+            {
+                var snapshot = submissionItem.QuestSnapshot;
+                var originalQuestion = snapshot.QuestIdOriginal.HasValue && questionsDict.ContainsKey(snapshot.QuestIdOriginal.Value)
+                    ? questionsDict[snapshot.QuestIdOriginal.Value]
+                    : null;
+
+                var questionResult = new QuestionResultViewModel
+                {
+                    QuestionId = snapshot.QuestIdOriginal ?? 0,
+                    OrderNumber = snapshot.QuestOrderSnapshot,
+                    QuestionText = snapshot.QuestionDescSnapshot,
+                    QuestionType = snapshot.QuestionTypeSnapshot,
+                    MaxScore = await GetMaxScoreForQuestionSnapshotAsync(snapshot.QuestSnapshotId)
+                };
+
+                if (submissionItem.Type == "auto" && submissionItem.AutoSubmissionResults.Any())
+                {
+                    var autoResult = submissionItem.AutoSubmissionResults.First();
+                    var allOptions = await GetAutoOptionsSnapshotByQuestionSnapshotIdAsync(snapshot.QuestSnapshotId);
+                    var selectedOption = allOptions.FirstOrDefault(o => o.QuestOptionId == autoResult.SelectedOptionId);
+
+                    questionResult.UserAnswer = selectedOption?.OptionText ?? "Не выбран";
+                    questionResult.Score = autoResult.IsCorrect == true ? questionResult.MaxScore : 0;
+                    questionResult.IsCorrect = autoResult.IsCorrect;
+                    questionResult.Status = autoResult.IsCorrect == true ? "correct" : (autoResult.IsCorrect == false ? "incorrect" : "pending");
+                }
+                else if (submissionItem.Type == "manual" && submissionItem.ManualSubmissionResult != null)
+                {
+                    var manualResult = submissionItem.ManualSubmissionResult;
+                    questionResult.UserAnswer = manualResult.AnswerText;
+                    questionResult.Score = manualResult.ScoreValue;
+                    questionResult.Commentary = manualResult.Commentary;
+                    questionResult.Status = manualResult.ScoreValue.HasValue ? "reviewed" : "pending";
+                }
+
+                viewModel.QuestionResults.Add(questionResult);
+            }
+
+            viewModel.AutoScore = viewModel.QuestionResults
+                .Where(q => q.QuestionType.StartsWith("auto") && q.Score.HasValue)
+                .Sum(q => q.Score.Value);
+
+            viewModel.ManualScore = viewModel.QuestionResults
+                .Where(q => q.QuestionType == "manual" && q.Score.HasValue)
+                .Sum(q => q.Score.Value);
+
+            return viewModel;
+        }
+
+        private async Task<int> GetMaxScoreForQuestionSnapshotAsync(int questionSnapshotId)
+        {
+            var config = await _context.ManualQuestionsConfigSnapshots
+                .FirstOrDefaultAsync(m => m.QuestSnapshotId == questionSnapshotId);
+
+            if (config != null) return config.MaxScore;
+
+            // Для auto-вопросов по умолчанию 1 балл
+            return 1;
+        }
+
+        private int GetMaxScoreForQuestion(int questionSnapshotId)
+        {
+            // Этот метод синхронный, используем асинхронную версию выше
+            return 1;
+        }
+        #endregion
+
     }
 }

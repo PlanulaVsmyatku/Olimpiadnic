@@ -1,120 +1,122 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
+using Olimpiadnic.Data;
 using Olimpiadnic.Entities;
+using Olimpiadnic.Extensions;
 using Olimpiadnic.Models.OlympiadModels;
+using Olimpiadnic.Services.Repos;
 namespace Olimpiadnic.Services
 {
     public class OlympiadSessionService : IOlympiadSessionService
     {
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IOlympiadRepository _repository;
         private const string SessionKeyPrefix = "OlympiadParticipation_";
 
-        public OlympiadSessionService(IHttpContextAccessor httpContextAccessor)
+        public OlympiadSessionService(IHttpContextAccessor httpContextAccessor, IOlympiadRepository repository)
         {
             _httpContextAccessor = httpContextAccessor;
+            _repository = repository;
         }
 
-        private ISession Session => _httpContextAccessor.HttpContext!.Session;
-
         public async Task<OlympiadParticipationViewModel> GetOrCreateSessionAsync(
-            int olympiadId, int userId, int participantId, List<Question> questions)
+            int olympiadId,
+            int userId,
+            int participantId,
+            List<Question> questions)
         {
             var session = GetSession(olympiadId);
-
-            // Если сессия существует и принадлежит тому же участнику - восстанавливаем
-            if (session != null && session.ParticipantId == participantId)
-            {
+            if (session != null)
                 return session;
-            }
 
-            // Пытаемся загрузить из БД (черновики/сохранённые ответы)
-            var savedAnswers = await LoadAnswersFromDatabaseAsync(participantId, questions);
-
-            // Создаём новую сессию
+            // Создаем новую сессию
             var participation = new OlympiadParticipationViewModel
             {
                 OlympiadId = olympiadId,
-                OlympiadTitle = questions.FirstOrDefault()?.Olymp?.Title ?? "Олимпиада",
+                OlympiadTitle = (await _repository.GetOlympiadByIdAsync(olympiadId))?.Title ?? "",
                 ParticipantId = participantId,
-                CurrentQuestionIndex = savedAnswers.CurrentIndex,
+                CurrentQuestionIndex = 0,
                 TotalQuestions = questions.Count,
                 IsCompleted = false,
-                Questions = savedAnswers.Questions ?? questions.Select((q, index) => new QuestionParticipationViewModel
+                Questions = new List<QuestionParticipationViewModel>()
+            };
+
+            // Загружаем каждый вопрос
+            foreach (var question in questions.OrderBy(q => q.QuestionOrder))
+            {
+                var questionVM = new QuestionParticipationViewModel
                 {
-                    QuestionId = q.QuestId,
-                    OrderNumber = q.QuestionOrder, // не null
-                    Description = q.Description,
-                    Type = q.Type,
-                    Attachments = q.QuestionAttachments?.OrderBy(a => a.SortOrder).Select(a => a.ImageUrl).ToList() ?? new List<string>(),
+                    QuestionId = question.QuestId,
+                    OrderNumber = question.QuestionOrder,
+                    Description = question.Description,
+                    Type = question.Type,
+                    Attachments = await GetQuestionAttachments(question.QuestId),
                     Options = new List<AutoQuestionOptionParticipationViewModel>(),
                     SelectedOptionIds = new List<int>(),
                     ManualAnswer = string.Empty
-                }).ToList()
-            };
+                };
+
+                // Для auto-вопросов загружаем варианты ответов
+                if (question.Type.StartsWith("auto"))
+                {
+                    var options = await _repository.GetQuestionWithOptionsAsync(question.QuestId);
+                    if (options?.AutoQuestions != null)
+                    {
+                        questionVM.Options = options.AutoQuestions
+                            .OrderBy(o => o.SortOrder)
+                            .Select(o => new AutoQuestionOptionParticipationViewModel
+                            {
+                                OptionId = o.QuestOptionId,
+                                OptionText = o.OptionText,
+                                IsSelected = false
+                            }).ToList();
+                    }
+                }
+
+                participation.Questions.Add(questionVM);
+            }
 
             SaveSession(participation);
             return participation;
         }
 
-        public void UpdateAnswer(int olympiadId, int questionIndex, QuestionParticipationViewModel? updatedQuestion)
+        public void UpdateAnswer(int olympiadId, int questionIndex, QuestionParticipationViewModel? question)
         {
             var session = GetSession(olympiadId);
             if (session == null) return;
 
-            if (updatedQuestion != null && questionIndex >= 0 && questionIndex < session.Questions.Count)
+            if (questionIndex >= 0 && questionIndex < session.Questions.Count && question != null)
             {
-                session.Questions[questionIndex] = updatedQuestion;
-            }
-            else if (questionIndex == -1)
-            {
-                // Обновляем только индекс текущего вопроса
-                // (индекс уже изменён в вызывающем коде)
+                session.Questions[questionIndex] = question;
             }
 
             SaveSession(session);
-
-            // Опционально: сохраняем в БД как черновик (каждый 5-й ответ или по таймеру)
-            _ = Task.Run(() => SaveDraftToDatabaseAsync(session));
         }
 
         public OlympiadParticipationViewModel? GetSession(int olympiadId)
         {
-            var json = Session.GetString($"{SessionKeyPrefix}{olympiadId}");
-            return json == null ? null : JsonConvert.DeserializeObject<OlympiadParticipationViewModel>(json);
+            var key = $"{SessionKeyPrefix}{olympiadId}";
+            return _httpContextAccessor.HttpContext?.Session.GetObject<OlympiadParticipationViewModel>(key);
         }
 
         public void ClearSession(int olympiadId)
         {
-            Session.Remove($"{SessionKeyPrefix}{olympiadId}");
+            var key = $"{SessionKeyPrefix}{olympiadId}";
+            _httpContextAccessor.HttpContext?.Session.Remove(key);
         }
 
-        public bool HasSession(int olympiadId)
+        private void SaveSession(OlympiadParticipationViewModel session)
         {
-            return Session.Keys.Contains($"{SessionKeyPrefix}{olympiadId}");
+            var key = $"{SessionKeyPrefix}{session.OlympiadId}";
+            _httpContextAccessor.HttpContext?.Session.SetObject(key, session);
         }
 
-        private void SaveSession(OlympiadParticipationViewModel participation)
+        private async Task<List<string>> GetQuestionAttachments(int questionId)
         {
-            var json = JsonConvert.SerializeObject(participation);
-            Session.SetString($"{SessionKeyPrefix}{participation.OlympiadId}", json);
-        }
-
-        // TODO: Реализовать загрузку из БД
-        private async Task<(int CurrentIndex, List<QuestionParticipationViewModel>? Questions)> LoadAnswersFromDatabaseAsync(
-            int participantId, List<Question> questions)
-        {
-            // Здесь будет загрузка сохранённых ответов из таблицы Submission_items (черновики)
-            // Пока возвращаем пустой результат
-            return (0, null);
-        }
-
-        // TODO: Реализовать сохранение черновика в БД
-        private async Task SaveDraftToDatabaseAsync(OlympiadParticipationViewModel participation)
-        {
-            // Сохранение ответов в БД как черновик (чтобы не потерять при сбое)
-            // Можно вызывать каждые N ответов или по таймеру
+            // Получить вложения из БД
+            var attachments = await _repository.GetQuestionAttachmentsAsync(questionId);
+            return attachments.Select(a => a.ImageUrl).ToList();
         }
 
     }
-
 }

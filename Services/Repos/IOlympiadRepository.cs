@@ -1,5 +1,6 @@
 using Olimpiadnic.Entities;
 using Olimpiadnic.Models.OlympiadModels;
+using Olimpiadnic.Models.RoleModels;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -8,7 +9,7 @@ namespace Olimpiadnic.Services.Repos
 {
     public interface IOlympiadRepository
     {
-        // Олимпиады
+        #region Олимпиады
         /// <summary>
         /// Возвращает лист типа Entities.Olympiad со всеми олимпиадами
         /// </summary>
@@ -51,8 +52,9 @@ namespace Olimpiadnic.Services.Repos
         /// <param name="olympId">ID олимпиады с которой нужно число заданий</param>
         /// <returns></returns>
         Task<int> GetTotalQuestionsCountAsync(int olympId);
+        #endregion
 
-        //Участники
+        #region Участники
         Task<IEnumerable<OlympiadParticipant>> GetParticipantsByOlympiadIdAsync(int olympId);
         Task<IEnumerable<OlympiadParticipant>> GetParticipantsByUserAndOlympiadIdsAsync(string userId, List<int> olympiadIds);
 
@@ -66,8 +68,10 @@ namespace Olimpiadnic.Services.Repos
         /// <param name="userId"></param>
         /// <returns></returns>
         Task<OlympiadParticipant> GetOrCreateParticipantAsync(int olympiadId, int userId);
+        #endregion
 
-        //Вопросы
+
+        #region Вопросы
         /// <summary>
         /// Получение всех вопросов олимпиады (оригиналы, без снапшотов)
         /// </summary>
@@ -89,25 +93,66 @@ namespace Olimpiadnic.Services.Repos
         /// <returns></returns>
         Task<ManualQuestionsConfig?> GetManualQuestionConfigAsync(int questionId);
 
-        /*
-        // Получение снапшота вопроса по ID оригинала (для конкретной олимпиады)
+        /// <summary>
+        /// Получение изображений конкретного вопроса
+        /// </summary>
+        /// <param name="questionId"></param>
+        /// <returns></returns>
+        Task<List<QuestionAttachment>> GetQuestionAttachmentsAsync(int questionId);
+        #endregion
+
+        #region Снапшоты
+        /// <summary>
+        /// Получение снапшота вопроса по ID оригинала (для конкретной олимпиады)
+        /// </summary>
         Task<QuestionsSnapshot?> GetQuestionSnapshotByOriginalIdAsync(int olympiadId, int originalQuestionId);
 
-        // Получение всех снапшотов вопросов олимпиады
+        /// <summary>
+        /// Получение всех снапшотов вопросов олимпиады
+        /// </summary>
         Task<List<QuestionsSnapshot>> GetQuestionSnapshotsByOlympiadIdAsync(int olympiadId);
 
-        // Получение вариантов ответов для снапшота (auto-radio/checkbox)
+        /// <summary>
+        /// Получение вариантов ответов для снапшота (auto-radio/checkbox)
+        /// </summary>
         Task<List<AutoQuestionsSnapshot>> GetAutoOptionsSnapshotByQuestionSnapshotIdAsync(int questionSnapshotId);
 
-        // Получение конфигурации ручного вопроса для снапшота
+        /// <summary>
+        /// Получение конфигурации ручного вопроса для снапшота
+        /// </summary>
         Task<ManualQuestionsConfigSnapshot?> GetManualConfigSnapshotByQuestionSnapshotIdAsync(int questionSnapshotId);
-
-        // Сохранение ответа (черновик или финальный)
+        #region == Ответы ==
+        /// <summary>
+        /// Сохранение ответа (черновик или финальный)
+        /// </summary>
         Task SaveAnswerSubmissionAsync(int participantId, int questionSnapshotId, object answerData);
 
-        // Финальное завершение олимпиады
+        /// <summary>
+        /// Финальное завершение олимпиады
+        /// </summary>
         Task CompleteOlympiadAsync(int participantId, int totalScore);
-        */
+        #endregion
+
+        /// <summary>
+        /// Получает снапшот вопроса по ID снапшота
+        /// </summary>
+        Task<QuestionsSnapshot?> GetQuestionSnapshotByIdAsync(int questionSnapshotId);
+        #endregion
+
+        #region Результаты участников
+        /// <summary>
+        /// Получает результат участника с его ответами (SubmissionItems)
+        /// </summary>
+        /// <param name="participantId">ID участника</param>
+        /// <returns>Результат участника или null</returns>
+        Task<OlympiadResult?> GetParticipantResultAsync(int participantId);
+
+        /// <summary>
+        /// Получает результаты участника с ответами и проверкой для отображения
+        /// </summary>
+        Task<ParticipantResultsViewModel?> GetParticipantResultsForDisplayAsync(int participantId);
+        #endregion
+
     }
 
 }

@@ -47,5 +47,7 @@ namespace Olimpiadnic.Models.OlympiadModels
         public bool IsSelected { get; set; }
     }
 
+
+
     #endregion
 }

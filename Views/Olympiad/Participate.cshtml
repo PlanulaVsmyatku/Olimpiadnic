@@ -86,6 +86,9 @@
             border: 1px solid #dee2e6;
             border-radius: 10px;
             font-family: monospace;
+            background-color: white;  
+            color: #212529;           
+            display: block;           
         }
         
         .nav-buttons {
@@ -136,9 +139,9 @@
     <!-- Карточка вопроса -->
     <div class="question-card">
         <!-- Тип вопроса -->
-        <div class="question-type-badge @(Model.CurrentQuestion.Type == "auto" ? "type-auto" : "type-manual")">
-            <i class="fas @(Model.CurrentQuestion.Type == "auto" ? "fa-check-circle" : "fa-pen") me-1"></i>
-            @(Model.CurrentQuestion.Type == "auto" ? "Тестовое задание" : "Развёрнутый ответ")
+        <div class="question-type-badge @(Model.CurrentQuestion.Type.StartsWith("auto") ? "type-auto" : "type-manual")">
+            <i class="fas @(Model.CurrentQuestion.Type.StartsWith("auto") ? "fa-check-circle" : "fa-pen") me-1"></i>
+            @(Model.CurrentQuestion.Type.StartsWith("auto") ? "Тестовое задание" : "Развёрнутый ответ")
         </div>
         
         <!-- Номер вопроса -->
@@ -243,38 +246,20 @@
                 </div>
             </form>
 
-            <!-- Кнопки навигации -->
-            <div class="nav-buttons mt-4">
-                @if (Model.CurrentQuestionIndex > 0)
-                {
-                    <button type="submit" name="previous" value="previous" class="btn btn-outline-secondary btn-nav">
-                        <i class="fas fa-arrow-left me-2"></i>Назад
-                    </button>
-                }
-                else
-                {
-                    <div></div>
-                }
-    
-                @if (Model.CurrentQuestionIndex + 1 < Model.TotalQuestions)
-                {
-                    <button type="submit" name="next" value="next" class="btn btn-primary btn-nav">
-                        Далее<i class="fas fa-arrow-right ms-2"></i>
-                    </button>
-                }
-                else
-                {
-                    <button type="submit" name="next" value="next" class="btn btn-submit btn-nav">
-                        <i class="fas fa-check-circle me-2"></i>Завершить олимпиаду
-                    </button>
-                }
+            <!-- Временная отладка -->
+            <div style="background: yellow; padding: 10px; margin: 10px 0;">
+                <strong>Debug:</strong>
+                QuestionId = @Model.CurrentQuestion.QuestionId,
+                Type = "@Model.CurrentQuestion.Type",
+                Options count = @Model.CurrentQuestion.Options.Count
+                CurrentQuestionIndex = @Model.CurrentQuestionIndex
             </div>
 
     </div>
     
     <!-- Таймер (опционально) -->
-    <div class="text-center text-muted mt-3">
-        <small><i class="fas fa-clock me-1"></i>Убедитесь, что у вас есть стабильное интернет-соединение</small>
+    <div class="text-center text-light mt-3">
+        <small><i class="fas fa-clock me-1 "></i>Убедитесь, что у вас есть стабильное интернет-соединение</small>
     </div>
 </div>
 

@@ -15,14 +15,23 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// Добавление сессий (для временного хранения ответов)
-builder.Services.AddDistributedMemoryCache();
+// 1. Добавляем сервисы для работы с сессией
+builder.Services.AddDistributedMemoryCache(); // Хранилище сессий в памяти
 builder.Services.AddSession(options =>
 {
+    // Время жизни сессии (30 минут бездействия)
     options.IdleTimeout = TimeSpan.FromMinutes(30);
-    options.Cookie.HttpOnly = true;
-    options.Cookie.IsEssential = true;
+
+    // Куки сессии
+    options.Cookie.Name = ".Olympiad.Session";
+    options.Cookie.HttpOnly = true; // Защита от XSS
+    options.Cookie.IsEssential = true; // Работает даже без согласия на cookie
+    options.Cookie.SameSite = SameSiteMode.Lax;
+
+    // Шифрование данных сессии
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
+builder.Services.AddHttpContextAccessor();
 
 // Добавление кастомных сервисов
 // Добавление сервиса восстановления паролей
@@ -33,6 +42,9 @@ builder.Services.AddScoped<IInviteService, InviteService>();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 // Добавление сервиса для работы с БД по олимпиадам
 builder.Services.AddScoped<IOlympiadRepository, OlympiadRepository>();
+// Добавление сервиса для работы с сессиями
+builder.Services.AddScoped<IOlympiadSessionService, OlympiadSessionService>();
+
 
 // Настройка аутентификации через cookies
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

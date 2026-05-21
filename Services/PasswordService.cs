@@ -35,7 +35,9 @@ namespace Olimpiadnic.Services
                 
             if (string.IsNullOrWhiteSpace(hash))
                 return false;
-                
+
+            //string pas = HashPassword(password); 
+
             try
             {
                 // BCrypt сравнивает пароль с хешем
