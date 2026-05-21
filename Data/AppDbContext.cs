@@ -44,6 +44,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<QuestionAttachment> QuestionAttachments { get; set; }
 
+    public virtual DbSet<QuestionAttachmentsSnapshot> QuestionAttachmentsSnapshots { get; set; }
+
     public virtual DbSet<QuestionsSnapshot> QuestionsSnapshots { get; set; }
 
     public virtual DbSet<Role> Roles { get; set; }
@@ -343,7 +345,7 @@ public partial class AppDbContext : DbContext
                 .HasColumnType("datetime")
                 .HasColumnName("created_at");
             entity.Property(e => e.CreatedAtSnap)
-                .HasDefaultValueSql("(getdate())")
+                .HasDefaultValueSql("(getdate())", "DF__Olympiad___creat__797309D9")
                 .HasColumnType("datetime")
                 .HasColumnName("created_at_snap");
             entity.Property(e => e.Credentials)
@@ -363,6 +365,7 @@ public partial class AppDbContext : DbContext
                 .HasMaxLength(500)
                 .IsUnicode(false)
                 .HasColumnName("image_URL");
+            entity.Property(e => e.OriginalOlympId).HasColumnName("original_olymp_ID");
             entity.Property(e => e.RegistClosed)
                 .HasColumnType("datetime")
                 .HasColumnName("regist_closed");
@@ -390,12 +393,12 @@ public partial class AppDbContext : DbContext
                 .HasColumnType("text")
                 .HasColumnName("description");
             entity.Property(e => e.IsActual)
-                .HasDefaultValue(true)
+                .HasDefaultValue(true, "DF__Questions__is_ac__693CA210")
                 .HasColumnName("is_actual");
             entity.Property(e => e.OlympId).HasColumnName("olymp_ID");
             entity.Property(e => e.QuestionOrder).HasColumnName("question_order");
             entity.Property(e => e.Type)
-                .HasMaxLength(10)
+                .HasMaxLength(13)
                 .IsUnicode(false)
                 .HasColumnName("type");
 
@@ -423,6 +426,26 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.Quest).WithMany(p => p.QuestionAttachments)
                 .HasForeignKey(d => d.QuestId)
                 .HasConstraintName("FK__Question___quest__6E01572D");
+        });
+
+        modelBuilder.Entity<QuestionAttachmentsSnapshot>(entity =>
+        {
+            entity.HasKey(e => e.AttachSnapId).HasName("PK__Question__8C21C1724ACF9623");
+
+            entity.ToTable("Question_attachments_snapshot");
+
+            entity.Property(e => e.AttachSnapId).HasColumnName("attach_snap_ID");
+            entity.Property(e => e.ImageUrl)
+                .HasMaxLength(500)
+                .IsUnicode(false)
+                .HasColumnName("image_url");
+            entity.Property(e => e.QuestSnapshotId).HasColumnName("quest_snapshot_ID");
+            entity.Property(e => e.SortOrder).HasColumnName("sort_order");
+
+            entity.HasOne(d => d.QuestSnapshot).WithMany(p => p.QuestionAttachmentsSnapshots)
+                .HasForeignKey(d => d.QuestSnapshotId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__Question___quest__09746778");
         });
 
         modelBuilder.Entity<QuestionsSnapshot>(entity =>

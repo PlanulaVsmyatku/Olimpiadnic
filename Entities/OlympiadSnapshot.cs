@@ -29,5 +29,7 @@ public partial class OlympiadSnapshot
 
     public DateTime RegistClosed { get; set; }
 
+    public int OriginalOlympId { get; set; }
+
     public virtual ICollection<QuestionsSnapshot> QuestionsSnapshots { get; set; } = new List<QuestionsSnapshot>();
 }

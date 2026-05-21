@@ -23,5 +23,7 @@ public partial class QuestionsSnapshot
 
     public virtual OlympiadSnapshot OlympSnap { get; set; } = null!;
 
+    public virtual ICollection<QuestionAttachmentsSnapshot> QuestionAttachmentsSnapshots { get; set; } = new List<QuestionAttachmentsSnapshot>();
+
     public virtual ICollection<SubmissionItem> SubmissionItems { get; set; } = new List<SubmissionItem>();
 }

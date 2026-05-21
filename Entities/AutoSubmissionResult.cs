@@ -9,7 +9,7 @@ public partial class AutoSubmissionResult
 
     public int SelectedOptionId { get; set; }
 
-    public bool IsCorrect { get; set; }
+    public bool? IsCorrect { get; set; }
 
     public virtual SubmissionItem SubmissionItem { get; set; } = null!;
 }
