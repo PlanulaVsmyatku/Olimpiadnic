@@ -227,19 +227,35 @@
             </div>
         </div>
     </div>
+    <!--IAntiforgery - защита-->
+    @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+    @{
+        var token = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+    }
+    <input type="hidden" name="__RequestVerificationToken" value="@token" />
 
     <script>
-            function registerForOlympiad(olympiadId) {
-                fetch(`/Olympiad/Register/${olympiadId}`, { method: 'POST' })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Вы успешно записаны!');
-                            location.reload();
-                        } else {
-                            alert(data.message || 'Ошибка при записи');
-                        }
-                    });
+                        function registerForOlympiad(olympiadId) {
+                fetch(`/Olympiad/Register/${olympiadId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Вы успешно записаны!');
+                        location.reload();
+                    } else {
+                        alert(data.message || 'Ошибка при записи');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка при записи');
+                });
             }
     </script>
 

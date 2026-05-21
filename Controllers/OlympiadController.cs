@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Olimpiadnic.Entities;
 using Olimpiadnic.Extensions;
 using Olimpiadnic.Models.OlympiadModels;
 using Olimpiadnic.Models.RoleModels;
+using Olimpiadnic.Services;
 using Olimpiadnic.Services.Repos;
 using System.Security.Claims;
 
@@ -85,9 +88,10 @@ namespace Olimpiadnic.Controllers
         #endregion
 
         #region Прохождение олимпиады (для участников)
-
+        // регистрация по ajax-запросу без доп страницы
         [HttpPost]
         [Authorize]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(int id)
         {
             try
@@ -104,30 +108,26 @@ namespace Olimpiadnic.Controllers
                     return Json(new { success = false, message = "Регистрация на эту олимпиаду закрыта" });
                 }
 
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userId))
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
                 {
                     return Json(new { success = false, requiresLogin = true, message = "Требуется авторизация" });
                 }
 
-                var participants = await _olympiadRepository.GetParticipantsByOlympiadIdAsync(id);
-                if (participants.Any(p => p.UserId == int.Parse(userId)))
+                var isRegistered = await _olympiadRepository.IsUserRegisteredAsync(id, userId);
+                if (isRegistered)
                 {
                     return Json(new { success = false, message = "Вы уже записаны на эту олимпиаду" });
                 }
 
-                // TODO: Добавить запись в таблицу OlympiadParticipants
-                // var participant = new OlympiadParticipant
-                // {
-                //     UserId = userId,
-                //     OlympId = id,
-                //     RegDate = now,
-                //     Status = "registered"
-                // };
-                // _context.OlympiadParticipants.Add(participant);
-                // await _context.SaveChangesAsync();
+                var result = await _olympiadRepository.RegisterParticipantAsync(id, userId);
 
-                return Json(new { success = true, message = "Вы успешно записаны на олимпиаду!" });
+                if (result)
+                {
+                    return Json(new { success = true, message = "Вы успешно записаны на олимпиаду!" });
+                }
+
+                return Json(new { success = false, message = "Не удалось записаться. Попробуйте позже." });
             }
             catch (Exception ex)
             {
@@ -139,11 +139,178 @@ namespace Olimpiadnic.Controllers
         [Authorize]
         public async Task<IActionResult> Participate(int id)
         {
-            // TODO: Страница прохождения олимпиады
-            return Content($"Страница прохождения олимпиады {id} (будет реализована позже)");
+            // Проверка прав и времени
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            var olympiad = await _olympiadRepository.GetOlympiadByIdAsync(id);
+            if (olympiad == null)
+            {
+                return NotFound();
+            }
+
+            var now = DateTime.Now;
+
+            // Проверка: олимпиада должна идти
+            if (now < olympiad.EventStart || now > olympiad.EventEnd)
+            {
+                TempData["Error"] = "Олимпиада ещё не началась или уже завершилась";
+                return RedirectToAction("Details", new { id });
+            }
+
+            // Проверка регистрации
+            var isRegistered = await _olympiadRepository.IsUserRegisteredAsync(id, userId);
+            if (!isRegistered)
+            {
+                TempData["Error"] = "Вы не зарегистрированы на эту олимпиаду";
+                return RedirectToAction("Details", new { id });
+            }
+
+            // Проверка, не завершил ли пользователь уже олимпиаду
+            var participant = await _olympiadRepository.GetOrCreateParticipantAsync(id, userId);
+            if (participant.Status == "completed")
+            {
+                TempData["Error"] = "Вы уже прошли эту олимпиаду";
+                return RedirectToAction("Results", new { id });
+            }
+
+            // Обновляем StartedAt если первый заход
+            if (participant.StartedAt == null)
+            {
+                participant.StartedAt = now;
+                await _olympiadRepository.UpdateParticipantAsync(participant);
+            }
+
+            // Получаем вопросы
+            var questions = await _olympiadRepository.GetQuestionsForParticipationAsync(id);
+            if (!questions.Any())
+            {
+                TempData["Error"] = "В этой олимпиаде пока нет вопросов";
+                return RedirectToAction("Details", new { id });
+            }
+
+            // Получаем или создаём сессию
+            var sessionService = HttpContext.RequestServices.GetRequiredService<IOlympiadSessionService>();
+            var participation = await sessionService.GetOrCreateSessionAsync(id, userId, participant.ParticipantId, questions);
+
+            // Если есть сохранённые ответы из сессии, загружаем их
+            if (participation.Questions.Any() && participation.Questions[0].Options.Count == 0)
+            {
+                await LoadSavedAnswersToSessionAsync(participation, participant.ParticipantId);
+            }
+
+            var viewModel = new OlympiadParticipationViewModel
+            {
+                OlympiadId = participation.OlympiadId,
+                OlympiadTitle = participation.OlympiadTitle,
+                ParticipantId = participation.ParticipantId,
+                CurrentQuestionIndex = participation.CurrentQuestionIndex,
+                TotalQuestions = participation.TotalQuestions,
+                IsCompleted = participation.IsCompleted,
+                Questions = participation.Questions
+            };
+
+            return View(viewModel);
+        }
+
+        // Вспомогательный метод для загрузки сохранённых ответов из черновика (если есть)
+        private async Task LoadSavedAnswersToSessionAsync(OlympiadParticipationViewModel participation, int participantId)
+        {
+            // TODO: Загрузка ответов из БД (черновики) - реализуем позже
+        }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveAnswer(OlympiadParticipationViewModel model, string action)
+        {
+            var sessionService = HttpContext.RequestServices.GetRequiredService<IOlympiadSessionService>();
+            var session = sessionService.GetSession(model.OlympiadId);
+
+            if (session == null)
+            {
+                return RedirectToAction("Participate", new { id = model.OlympiadId });
+            }
+
+            // Сохраняем ответ на текущий вопрос
+            var currentQuestion = session.Questions[model.CurrentQuestionIndex];
+
+            if (currentQuestion.Type == "auto-radio" || currentQuestion.Type == "auto-checkbox")
+            {
+                currentQuestion.SelectedOptionIds = model.CurrentQuestion.SelectedOptionIds ?? new List<int>();
+            }
+            else if (currentQuestion.Type == "manual")
+            {
+                currentQuestion.ManualAnswer = model.CurrentQuestion.ManualAnswer ?? string.Empty;
+            }
+
+            sessionService.UpdateAnswer(model.OlympiadId, model.CurrentQuestionIndex, currentQuestion);
+
+            // Навигация в зависимости от действия
+            switch (action)
+            {
+                case "previous":
+                    if (model.CurrentQuestionIndex > 0)
+                    {
+                        session.CurrentQuestionIndex--;
+                        sessionService.UpdateAnswer(model.OlympiadId, -1, null);
+                    }
+                    break;
+
+                case "next":
+                    if (model.CurrentQuestionIndex + 1 < session.TotalQuestions)
+                    {
+                        session.CurrentQuestionIndex++;
+                        sessionService.UpdateAnswer(model.OlympiadId, -1, null);
+                    }
+                    else
+                    {
+                        // Завершение - переходим к подтверждению
+                        return RedirectToAction("ConfirmSubmit", new { id = model.OlympiadId });
+                    }
+                    break;
+
+                case "submit":
+                    return RedirectToAction("ConfirmSubmit", new { id = model.OlympiadId });
+            }
+
+            return RedirectToAction("Participate", new { id = model.OlympiadId });
+        }
+
+        [Authorize]
+        public async Task<IActionResult> ConfirmSubmit(int id)
+        {
+            var sessionService = HttpContext.RequestServices.GetRequiredService<IOlympiadSessionService>();
+            var session = sessionService.GetSession(id);
+
+            if (session == null)
+            {
+                return RedirectToAction("Participate", new { id });
+            }
+
+            // Подсчитываем количество отвеченных вопросов
+            var answeredCount = session.Questions.Count(q =>
+                (q.Type == "auto-radio" && q.SelectedOptionIds.Any()) ||
+                (q.Type == "auto-checkbox" && q.SelectedOptionIds.Any()) ||
+                (q.Type == "manual" && !string.IsNullOrWhiteSpace(q.ManualAnswer)));
+
+            var unansweredCount = session.TotalQuestions - answeredCount;
+
+            ViewBag.OlympiadId = id;
+            ViewBag.OlympiadTitle = session.OlympiadTitle;
+            ViewBag.AnsweredCount = answeredCount;
+            ViewBag.UnansweredCount = unansweredCount;
+            ViewBag.TotalQuestions = session.TotalQuestions;
+
+            return View();
         }
 
         #endregion
-        
+
+
+
     }
 }

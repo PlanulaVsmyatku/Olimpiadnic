@@ -11,8 +11,14 @@ namespace Olimpiadnic.Models.OlympiadModels
         public int ParticipantId { get; set; }
         public int CurrentQuestionIndex { get; set; }
         public int TotalQuestions { get; set; }
-        public QuestionParticipationViewModel CurrentQuestion { get; set; } = new();
         public bool IsCompleted { get; set; }
+
+        // Список всех вопросов для хранения ответов в сессии
+        public List<QuestionParticipationViewModel> Questions { get; set; } = new();
+
+        // Текущий вопрос (для удобства)
+        public QuestionParticipationViewModel CurrentQuestion =>
+            Questions.ElementAtOrDefault(CurrentQuestionIndex) ?? new QuestionParticipationViewModel();
     }
 
     public class QuestionParticipationViewModel

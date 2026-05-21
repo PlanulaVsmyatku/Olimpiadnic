@@ -427,43 +427,36 @@
             }
         
             // Функция записи на олимпиаду
-            function registerForOlympiad(olympiadId, buttonElement) {
-                // Сохраняем оригинальный текст
+                function registerForOlympiad(olympiadId, buttonElement) {
                 var originalText = buttonElement.innerHTML;
-            
-                // Показываем индикатор загрузки
+
                 buttonElement.disabled = true;
                 buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Запись...';
-            
-                // Отправляем AJAX запрос - метода в HomeController пока не будет
-                fetch('/Home/RegisterForOlympiad', {
+
+                fetch(`/Olympiad/Register/${olympiadId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'RequestVerificationToken': getAntiForgeryToken()
-                    },
-                    body: JSON.stringify({ olympiadId: olympiadId })
+                    }
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Успешная запись
-                        showToast('Успешно!', data.message || 'Вы успешно записаны на олимпиаду!', 'success');
-                    
-                        // Меняем состояние кнопки
+                        showToast('Успешно!', data.message, 'success');
+
                         buttonElement.innerHTML = '<i class="fas fa-check me-2"></i>Вы записаны';
                         buttonElement.classList.remove('btn-register');
                         buttonElement.classList.add('btn-outline-register');
-                    
-                        // Перезагружаем страницу через 1.5 секунды для обновления состояния
+                        buttonElement.disabled = true;
+
+                        // Обновляем состояние в модели (для Details страницы при переходе)
                         setTimeout(function() {
                             location.reload();
                         }, 1500);
                     } else if (data.requiresLogin) {
-                        // Требуется авторизация
                         window.location.href = '/Account/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
                     } else {
-                        // Ошибка
                         showToast('Ошибка!', data.message || 'Произошла ошибка при записи', 'error');
                         buttonElement.disabled = false;
                         buttonElement.innerHTML = originalText;

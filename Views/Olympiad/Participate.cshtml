@@ -161,39 +161,88 @@
                 }
             </div>
         }
-        
-        <!-- Форма ответа -->
-        <form asp-action="SaveAnswer" method="post">
-            @Html.AntiForgeryToken()
-            <input type="hidden" asp-for="OlympiadId" />
-            <input type="hidden" asp-for="ParticipantId" />
-            <input type="hidden" asp-for="CurrentQuestionIndex" />
-            <input type="hidden" name="CurrentQuestion.QuestionId" value="@Model.CurrentQuestion.QuestionId" />
-            <input type="hidden" name="CurrentQuestion.Type" value="@Model.CurrentQuestion.Type" />
-            
-            @if (Model.CurrentQuestion.Type == "auto")
-            {
-                // Тестовый вопрос - варианты ответов
-                <div class="options-container">
-                    @for (int i = 0; i < Model.CurrentQuestion.Options.Count; i++)
+                <form asp-action="SaveAnswer" method="post" id="answerForm">
+                @Html.AntiForgeryToken()
+
+                <input type="hidden" asp-for="OlympiadId" />
+                <input type="hidden" asp-for="ParticipantId" />
+                <input type="hidden" asp-for="CurrentQuestionIndex" />
+                <input type="hidden" asp-for="TotalQuestions" />
+                <input type="hidden" name="CurrentQuestion.QuestionId" value="@Model.CurrentQuestion.QuestionId" />
+                <input type="hidden" name="CurrentQuestion.Type" value="@Model.CurrentQuestion.Type" />
+
+                @if (Model.CurrentQuestion.Type == "auto-radio")
+                {
+                    <!-- Одиночный выбор (radio) -->
+                    <div class="options-container">
+                        @for (int i = 0; i < Model.CurrentQuestion.Options.Count; i++)
+                        {
+                            var option = Model.CurrentQuestion.Options[i];
+                            <div class="option">
+                                <input type="radio"
+                                       name="CurrentQuestion.SelectedOptionIds"
+                                       value="@option.OptionId"
+                                       id="opt_@option.OptionId"
+                                @(option.IsSelected ? "checked" : "") />
+                                <label for="opt_@option.OptionId">@option.OptionText</label>
+                            </div>
+                        }
+                    </div>
+                }
+                else if (Model.CurrentQuestion.Type == "auto-checkbox")
+                {
+                    <!-- Множественный выбор (checkbox) -->
+                    <div class="options-container">
+                        @for (int i = 0; i < Model.CurrentQuestion.Options.Count; i++)
+                        {
+                            var option = Model.CurrentQuestion.Options[i];
+                            <div class="option">
+                                <input type="checkbox"
+                                       name="CurrentQuestion.SelectedOptionIds"
+                                       value="@option.OptionId"
+                                       id="opt_@option.OptionId"
+                                @(option.IsSelected ? "checked" : "") />
+                                <label for="opt_@option.OptionId">@option.OptionText</label>
+                            </div>
+                        }
+                    </div>
+                }
+                else if (Model.CurrentQuestion.Type == "manual")
+                {
+                    <!-- Развёрнутый ответ -->
+                    <textarea name="CurrentQuestion.ManualAnswer"
+                              class="manual-answer"
+                              placeholder="Введите ваш ответ здесь...">@Model.CurrentQuestion.ManualAnswer</textarea>
+                }
+
+                <!-- Кнопки навигации -->
+                <div class="nav-buttons mt-4">
+                    @if (Model.CurrentQuestionIndex > 0)
                     {
-                        var option = Model.CurrentQuestion.Options[i];
-                        <div class="option">
-                            <input type="radio" name="CurrentQuestion.SelectedOptionIds" 
-                                   value="@option.OptionId" id="opt_@option.OptionId"
-                                   @(option.IsSelected ? "checked" : "") />
-                            <label for="opt_@option.OptionId">@option.OptionText</label>
-                        </div>
+                        <button type="submit" name="action" value="previous" class="btn btn-outline-secondary btn-nav">
+                            <i class="fas fa-arrow-left me-2"></i>Назад
+                        </button>
+                    }
+                    else
+                    {
+                        <div></div>
+                    }
+
+                    @if (Model.CurrentQuestionIndex + 1 < Model.TotalQuestions)
+                    {
+                        <button type="submit" name="action" value="next" class="btn btn-primary btn-nav">
+                            Далее<i class="fas fa-arrow-right ms-2"></i>
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="submit" name="action" value="submit" class="btn btn-submit btn-nav">
+                            <i class="fas fa-check-circle me-2"></i>Завершить олимпиаду
+                        </button>
                     }
                 </div>
-            }
-            else
-            {
-                // Развёрнутый ответ - текстовое поле
-                <textarea name="CurrentQuestion.ManualAnswer" class="manual-answer" 
-                          placeholder="Введите ваш ответ здесь...">@Model.CurrentQuestion.ManualAnswer</textarea>
-            }
-            
+            </form>
+
             <!-- Кнопки навигации -->
             <div class="nav-buttons mt-4">
                 @if (Model.CurrentQuestionIndex > 0)
@@ -221,7 +270,6 @@
                 }
             </div>
 
-        </form>
     </div>
     
     <!-- Таймер (опционально) -->

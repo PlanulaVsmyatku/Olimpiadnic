@@ -55,6 +55,59 @@ namespace Olimpiadnic.Services.Repos
         //Участники
         Task<IEnumerable<OlympiadParticipant>> GetParticipantsByOlympiadIdAsync(int olympId);
         Task<IEnumerable<OlympiadParticipant>> GetParticipantsByUserAndOlympiadIdsAsync(string userId, List<int> olympiadIds);
+
+        Task<bool> RegisterParticipantAsync(int olympiadId, int userId);
+        Task<bool> IsUserRegisteredAsync(int olympiadId, int userId);
+        Task UpdateParticipantAsync(OlympiadParticipant participant);
+        /// <summary>
+        /// Получение или создание участника (если не существует)
+        /// </summary>
+        /// <param name="olympiadId"></param>
+        /// <param name="userId"></param>
+        /// <returns></returns>
+        Task<OlympiadParticipant> GetOrCreateParticipantAsync(int olympiadId, int userId);
+
+        //Вопросы
+        /// <summary>
+        /// Получение всех вопросов олимпиады (оригиналы, без снапшотов)
+        /// </summary>
+        /// <param name="olympiadId"></param>
+        /// <returns></returns>
+        Task<List<Question>> GetQuestionsForParticipationAsync(int olympiadId);
+
+        /// <summary>
+        /// Получение вопроса с его вариантами ответов (для auto)
+        /// </summary>
+        /// <param name="questionId"></param>
+        /// <returns></returns>
+        Task<Question?> GetQuestionWithOptionsAsync(int questionId);
+
+        /// <summary>
+        /// Получение конфигурации ручного вопроса
+        /// </summary>
+        /// <param name="questionId"></param>
+        /// <returns></returns>
+        Task<ManualQuestionsConfig?> GetManualQuestionConfigAsync(int questionId);
+
+        /*
+        // Получение снапшота вопроса по ID оригинала (для конкретной олимпиады)
+        Task<QuestionsSnapshot?> GetQuestionSnapshotByOriginalIdAsync(int olympiadId, int originalQuestionId);
+
+        // Получение всех снапшотов вопросов олимпиады
+        Task<List<QuestionsSnapshot>> GetQuestionSnapshotsByOlympiadIdAsync(int olympiadId);
+
+        // Получение вариантов ответов для снапшота (auto-radio/checkbox)
+        Task<List<AutoQuestionsSnapshot>> GetAutoOptionsSnapshotByQuestionSnapshotIdAsync(int questionSnapshotId);
+
+        // Получение конфигурации ручного вопроса для снапшота
+        Task<ManualQuestionsConfigSnapshot?> GetManualConfigSnapshotByQuestionSnapshotIdAsync(int questionSnapshotId);
+
+        // Сохранение ответа (черновик или финальный)
+        Task SaveAnswerSubmissionAsync(int participantId, int questionSnapshotId, object answerData);
+
+        // Финальное завершение олимпиады
+        Task CompleteOlympiadAsync(int participantId, int totalScore);
+        */
     }
 
 }
