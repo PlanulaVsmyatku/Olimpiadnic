@@ -135,6 +135,14 @@
             <div class="progress-fill" style="width: @((Model.CurrentQuestionIndex + 1) * 100 / Model.TotalQuestions)%"></div>
         </div>
     </div>
+
+        <!--Уведомление о черновике-->
+        @if (Model != null && Model.CurrentQuestionIndex > 0)
+        {
+            <div class="alert alert-info">
+                <i class="fas fa-save"></i> Ваш прогресс сохранен. Вы остановились на вопросе @(Model.CurrentQuestionIndex + 1).
+            </div>
+        }
     
     <!-- Карточка вопроса -->
     <div class="question-card">
@@ -245,6 +253,7 @@
                     }
                 </div>
             </form>
+            
 
             <!-- Временная отладка -->
             <div style="background: yellow; padding: 10px; margin: 10px 0;">

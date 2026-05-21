@@ -19,15 +19,22 @@ namespace Olimpiadnic.Services
             _repository = repository;
         }
 
-        public async Task<OlympiadParticipationViewModel> GetOrCreateSessionAsync(
+        /// <summary>
+        /// Создание новой сессии с вопросами из БД
+        /// </summary>
+        public async Task<OlympiadParticipationViewModel> CreateSessionAsync(
             int olympiadId,
             int userId,
             int participantId,
             List<Question> questions)
         {
-            var session = GetSession(olympiadId);
-            if (session != null)
-                return session;
+            // Проверяем, не существует ли уже сессия
+            var existingSession = GetSession(olympiadId);
+            if (existingSession != null)
+            {
+                // Если сессия существует, возвращаем её
+                return existingSession;
+            }
 
             // Создаем новую сессию
             var participation = new OlympiadParticipationViewModel
@@ -76,47 +83,141 @@ namespace Olimpiadnic.Services
                 participation.Questions.Add(questionVM);
             }
 
+            // Сохраняем в сессию
             SaveSession(participation);
             return participation;
         }
 
-        public void UpdateAnswer(int olympiadId, int questionIndex, QuestionParticipationViewModel? question)
-        {
-            var session = GetSession(olympiadId);
-            if (session == null) return;
-
-            if (questionIndex >= 0 && questionIndex < session.Questions.Count && question != null)
-            {
-                session.Questions[questionIndex] = question;
-            }
-
-            SaveSession(session);
-        }
-
+        /// <summary>
+        /// Получение существующей сессии (для восстановления черновика)
+        /// </summary>
         public OlympiadParticipationViewModel? GetSession(int olympiadId)
         {
             var key = $"{SessionKeyPrefix}{olympiadId}";
             return _httpContextAccessor.HttpContext?.Session.GetObject<OlympiadParticipationViewModel>(key);
         }
 
-        public void ClearSession(int olympiadId)
+        /// <summary>
+        /// Полное обновление сессии
+        /// </summary>
+        public void UpdateSession(OlympiadParticipationViewModel session)
+        {
+            if (session == null) return;
+            SaveSession(session);
+        }
+
+        /// <summary>
+        /// Обновление ответа на конкретный вопрос
+        /// </summary>
+        public void UpdateAnswer(int olympiadId, int questionIndex, QuestionParticipationViewModel answer)
+        {
+            var session = GetSession(olympiadId);
+            if (session == null) return;
+
+            if (questionIndex >= 0 && questionIndex < session.Questions.Count && answer != null)
+            {
+                // Обновляем ответ на вопрос
+                session.Questions[questionIndex] = answer;
+                SaveSession(session);
+            }
+        }
+
+        /// <summary>
+        /// Обновление текущего индекса вопроса
+        /// </summary>
+        public void UpdateCurrentQuestionIndex(int olympiadId, int newIndex)
+        {
+            var session = GetSession(olympiadId);
+            if (session == null) return;
+
+            if (newIndex >= 0 && newIndex < session.TotalQuestions)
+            {
+                session.CurrentQuestionIndex = newIndex;
+                SaveSession(session);
+            }
+        }
+
+        /// <summary>
+        /// Удаление сессии (при завершении олимпиады)
+        /// </summary>
+        public void DeleteSession(int olympiadId)
         {
             var key = $"{SessionKeyPrefix}{olympiadId}";
             _httpContextAccessor.HttpContext?.Session.Remove(key);
         }
 
+        /// <summary>
+        /// Проверка существования сессии
+        /// </summary>
+        public bool SessionExists(int olympiadId)
+        {
+            return GetSession(olympiadId) != null;
+        }
+
+        /// <summary>
+        /// Сохранение сессии
+        /// </summary>
         private void SaveSession(OlympiadParticipationViewModel session)
         {
             var key = $"{SessionKeyPrefix}{session.OlympiadId}";
             _httpContextAccessor.HttpContext?.Session.SetObject(key, session);
         }
 
+        /// <summary>
+        /// Получение вложений вопроса
+        /// </summary>
         private async Task<List<string>> GetQuestionAttachments(int questionId)
         {
-            // Получить вложения из БД
             var attachments = await _repository.GetQuestionAttachmentsAsync(questionId);
             return attachments.Select(a => a.ImageUrl).ToList();
         }
 
+        /// <summary>
+        /// Получение конкретного вопроса из сессии с сохраненными ответами
+        /// </summary>
+        public QuestionParticipationViewModel? GetQuestionFromSession(int olympiadId, int questionIndex)
+        {
+            var session = GetSession(olympiadId);
+            if (session == null) return null;
+
+            if (questionIndex < 0 || questionIndex >= session.Questions.Count)
+                return null;
+
+            var question = session.Questions[questionIndex];
+
+            // Создаем глубокую копию вопроса, чтобы изменения не влияли на сессию напрямую
+            var questionCopy = new QuestionParticipationViewModel
+            {
+                QuestionId = question.QuestionId,
+                OrderNumber = question.OrderNumber,
+                Description = question.Description,
+                Type = question.Type,
+                Attachments = new List<string>(question.Attachments),
+                Options = question.Options.Select(o => new AutoQuestionOptionParticipationViewModel
+                {
+                    OptionId = o.OptionId,
+                    OptionText = o.OptionText,
+                    IsSelected = o.IsSelected
+                }).ToList(),
+                SelectedOptionIds = new List<int>(question.SelectedOptionIds ?? new List<int>()),
+                ManualAnswer = question.ManualAnswer ?? string.Empty
+            };
+
+            return questionCopy;
+        }
+
+        /// <summary>
+        /// Получение текущего вопроса из сессии
+        /// </summary>
+        public QuestionParticipationViewModel? GetCurrentQuestion(int olympiadId)
+        {
+            var session = GetSession(olympiadId);
+            if (session == null) return null;
+
+            return GetQuestionFromSession(olympiadId, session.CurrentQuestionIndex);
+        }
+
     }
+
 }
+

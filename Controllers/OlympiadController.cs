@@ -16,16 +16,19 @@ namespace Olimpiadnic.Controllers
     public class OlympiadController : Controller
     {
         private readonly IOlympiadRepository _olympiadRepository;
+        private readonly IOlympiadSessionService _sessionService;
         private readonly ILogger<OlympiadController> _logger;
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public OlympiadController(ILogger<OlympiadController> logger, IWebHostEnvironment webHostEnvironment, IOlympiadRepository olympiadRepository, AppDbContext context)
+        public OlympiadController(ILogger<OlympiadController> logger, IWebHostEnvironment webHostEnvironment, IOlympiadRepository olympiadRepository,
+                AppDbContext context, IOlympiadSessionService sessionService)
         {
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
             _olympiadRepository = olympiadRepository;
             _context = context;
+            _sessionService = sessionService;
         }
 
 
@@ -229,33 +232,46 @@ namespace Olimpiadnic.Controllers
                 await _olympiadRepository.UpdateParticipantAsync(participant);
             }
 
-            // Получаем вопросы
-            var questions = await _olympiadRepository.GetQuestionsForParticipationAsync(id);
-            if (!questions.Any())
+            var sessionService = HttpContext.RequestServices.GetRequiredService<IOlympiadSessionService>();
+
+            // Получаем или создаем сессию
+            OlympiadParticipationViewModel participation;
+            var existingSession = sessionService.GetSession(id);
+
+            if (existingSession != null)
             {
-                TempData["Error"] = "В этой олимпиаде пока нет вопросов";
-                return RedirectToAction("Details", new { id });
+                participation = existingSession;
+
+                // Получаем текущий вопрос с сохраненными ответами
+                var currentQuestion = sessionService.GetCurrentQuestion(id);
+                if (currentQuestion != null)
+                {
+                    // Обновляем текущий вопрос в модели
+                    participation.Questions[participation.CurrentQuestionIndex] = currentQuestion;
+                }
+
+                _logger.LogInformation($"Восстановлена сессия. Текущий вопрос: {participation.CurrentQuestionIndex + 1}, Ответов сохранено: {CountAnsweredQuestions(participation)}");
+            }
+            else
+            {
+                // Создаем новую сессию
+                var questions = await _olympiadRepository.GetQuestionsForParticipationAsync(id);
+                participation = await sessionService.CreateSessionAsync(id, userId, participant.ParticipantId, questions);
             }
 
-            // Получаем или создаём сессию
-            var sessionService = HttpContext.RequestServices.GetRequiredService<IOlympiadSessionService>();
-            var participation = await sessionService.GetOrCreateSessionAsync(id, userId, participant.ParticipantId, questions);
-
-            var viewModel = new OlympiadParticipationViewModel
-            {
-                OlympiadId = participation.OlympiadId,
-                OlympiadTitle = participation.OlympiadTitle,
-                ParticipantId = participation.ParticipantId,
-                CurrentQuestionIndex = participation.CurrentQuestionIndex,
-                TotalQuestions = participation.TotalQuestions,
-                IsCompleted = participation.IsCompleted,
-                Questions = participation.Questions
-            };
-
-            return View(viewModel);
+            return View(participation);
         }
 
-        // Вспомогательный метод для загрузки сохранённых ответов из черновика (если есть)
+        // Вспомогательный метод для подсчета отвеченных вопросов
+        private int CountAnsweredQuestions(OlympiadParticipationViewModel participation)
+        {
+            return participation.Questions.Count(q =>
+                (q.Type.StartsWith("auto") && q.SelectedOptionIds != null && q.SelectedOptionIds.Any()) ||
+                (q.Type == "manual" && !string.IsNullOrWhiteSpace(q.ManualAnswer))
+            );
+        }
+
+        // Вспомогательный метод для загрузки сохранённых ответов из черновика БД (если есть)
         private async Task LoadSavedAnswersToSessionAsync(OlympiadParticipationViewModel participation, int participantId)
         {
             
@@ -268,30 +284,43 @@ namespace Olimpiadnic.Controllers
         {
             try
             {
-                // Получаем сессию
                 var sessionService = HttpContext.RequestServices.GetRequiredService<IOlympiadSessionService>();
+
+                // Получаем текущую сессию
                 var session = sessionService.GetSession(model.OlympiadId);
 
                 if (session == null)
                 {
+                    _logger.LogWarning($"Сессия не найдена для олимпиады {model.OlympiadId}");
                     TempData["Error"] = "Сессия не найдена. Пожалуйста, начните прохождение заново.";
                     return RedirectToAction("Participate", new { id = model.OlympiadId });
                 }
 
-                // Сохраняем ответ на текущий вопрос
+                // Сохраняем ответ на текущий вопрос, если он изменился
                 if (model.CurrentQuestion != null && model.CurrentQuestionIndex >= 0 && model.CurrentQuestionIndex < session.Questions.Count)
                 {
                     // Копируем ответы из модели в сессию
                     var currentQuestion = session.Questions[model.CurrentQuestionIndex];
-                    currentQuestion.SelectedOptionIds = model.CurrentQuestion.SelectedOptionIds ?? new List<int>();
-                    currentQuestion.ManualAnswer = model.CurrentQuestion.ManualAnswer ?? string.Empty;
 
-                    // Обновляем Options (IsSelected)
-                    foreach (var option in currentQuestion.Options)
+                    // Сохраняем выбранные варианты
+                    if (model.CurrentQuestion.SelectedOptionIds != null)
                     {
-                        option.IsSelected = currentQuestion.SelectedOptionIds.Contains(option.OptionId);
+                        currentQuestion.SelectedOptionIds = new List<int>(model.CurrentQuestion.SelectedOptionIds);
+
+                        // Обновляем IsSelected для каждого варианта
+                        foreach (var option in currentQuestion.Options)
+                        {
+                            option.IsSelected = currentQuestion.SelectedOptionIds.Contains(option.OptionId);
+                        }
                     }
 
+                    // Сохраняем ручной ответ
+                    if (model.CurrentQuestion.ManualAnswer != null)
+                    {
+                        currentQuestion.ManualAnswer = model.CurrentQuestion.ManualAnswer;
+                    }
+
+                    // Обновляем ответ в сессии
                     sessionService.UpdateAnswer(model.OlympiadId, model.CurrentQuestionIndex, currentQuestion);
                 }
 
@@ -301,20 +330,34 @@ namespace Olimpiadnic.Controllers
                     case "previous":
                         if (model.CurrentQuestionIndex > 0)
                         {
-                            session.CurrentQuestionIndex--;
-                            sessionService.UpdateAnswer(model.OlympiadId, -1, null);
+                            var newIndex = model.CurrentQuestionIndex - 1;
+                            sessionService.UpdateCurrentQuestionIndex(model.OlympiadId, newIndex);
+                            
                         }
                         break;
 
                     case "next":
                         if (model.CurrentQuestionIndex + 1 < session.TotalQuestions)
                         {
-                            session.CurrentQuestionIndex++;
-                            sessionService.UpdateAnswer(model.OlympiadId, -1, null);
+                            var newIndex = model.CurrentQuestionIndex + 1;
+                            sessionService.UpdateCurrentQuestionIndex(model.OlympiadId, newIndex);
                         }
                         break;
 
                     case "submit":
+                        // Проверяем, все ли вопросы отвечены
+                        var unansweredQuestions = session.Questions
+                            .Select((q, idx) => new { q, idx })
+                            .Where(x => IsQuestionUnanswered(x.q))
+                            .ToList();
+
+                        if (unansweredQuestions.Any())
+                        {
+                            var unansweredNumbers = string.Join(", ", unansweredQuestions.Select(x => x.idx + 1));
+                            TempData["Warning"] = $"Вы не ответили на следующие вопросы: {unansweredNumbers}. Вы уверены, что хотите завершить?";
+                            return RedirectToAction("ConfirmSubmit", new { id = model.OlympiadId });
+                        }
+
                         return RedirectToAction("ConfirmSubmit", new { id = model.OlympiadId });
                 }
 
@@ -322,12 +365,27 @@ namespace Olimpiadnic.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ошибка при сохранении ответа");
+                _logger.LogError(ex, "Ошибка при сохранении ответа для олимпиады {OlympiadId}", model.OlympiadId);
                 TempData["Error"] = "Произошла ошибка при сохранении ответа";
                 return RedirectToAction("Participate", new { id = model.OlympiadId });
             }
         }
 
+        // Вспомогательный метод для проверки отвеченности вопроса
+        private bool IsQuestionUnanswered(QuestionParticipationViewModel question)
+        {
+            if (question.Type.StartsWith("auto"))
+            {
+                return question.SelectedOptionIds == null || !question.SelectedOptionIds.Any();
+            }
+            else if (question.Type == "manual")
+            {
+                return string.IsNullOrWhiteSpace(question.ManualAnswer);
+            }
+            return true;
+        }
+
+        // Метод для подтверждения завершения
         [Authorize]
         public async Task<IActionResult> ConfirmSubmit(int id)
         {
@@ -339,34 +397,57 @@ namespace Olimpiadnic.Controllers
                 return RedirectToAction("Participate", new { id });
             }
 
+            // Подсчитываем статистику для подтверждения
+            var answeredCount = session.Questions.Count(q => !IsQuestionUnanswered(q));
+            var totalCount = session.TotalQuestions;
+
+            ViewBag.AnsweredCount = answeredCount;
+            ViewBag.TotalCount = totalCount;
+            ViewBag.UnansweredCount = totalCount - answeredCount;
+
             return View(session);
         }
 
+        // Метод для финальной отправки
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SubmitOlympiad(int id)
         {
-            var sessionService = HttpContext.RequestServices.GetRequiredService<IOlympiadSessionService>();
-            var session = sessionService.GetSession(id);
-
-            if (session == null)
+            try
             {
-                return RedirectToAction("Details", new { id });
+                var sessionService = HttpContext.RequestServices.GetRequiredService<IOlympiadSessionService>();
+                var session = sessionService.GetSession(id);
+
+                if (session == null)
+                {
+                    TempData["Error"] = "Сессия не найдена";
+                    return RedirectToAction("Details", new { id });
+                }
+                int totalScore = 12; //временная заглушка
+                // Сохраняем все ответы в БД и вычисляем баллы
+                /*
+                var totalScore = await _olympiadRepository.SubmitParticipantAnswersAsync(
+                    session.ParticipantId,
+                    session.Questions);
+                */
+                // Завершаем олимпиаду
+                await _olympiadRepository.CompleteOlympiadAsync(session.ParticipantId, totalScore);
+
+                // Удаляем сессию
+                sessionService.DeleteSession(id);
+
+                _logger.LogInformation($"Олимпиада {id} завершена для участника {session.ParticipantId}. Результат: {totalScore}");
+
+                TempData["Success"] = $"Олимпиада успешно завершена! Ваш результат: {totalScore} баллов.";
+                return RedirectToAction("Results", new { id });
             }
-
-            // Сохраняем все ответы в БД
-            //var totalScore = await _olympiadRepository.SubmitParticipantAnswersAsync(
-               //session.ParticipantId,
-                //session.Questions);
-
-            // Завершаем олимпиаду
-            await _olympiadRepository.CompleteOlympiadAsync(session.ParticipantId, /*totalScore*/ 12);
-
-            // Очищаем сессию
-            sessionService.ClearSession(id);
-
-            return RedirectToAction("Results", new { id });
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при завершении олимпиады {OlympiadId}", id);
+                TempData["Error"] = "Произошла ошибка при завершении олимпиады";
+                return RedirectToAction("Participate", new { id });
+            }
         }
         #endregion
 
