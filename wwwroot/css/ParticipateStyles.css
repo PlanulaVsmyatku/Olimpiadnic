@@ -1,0 +1,118 @@
+﻿body {
+    background: #f0f2f5;
+}
+
+.progress-container {
+    background: white;
+    border-radius: 10px;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.progress-bar-custom {
+    height: 10px;
+    background: #e9ecef;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    transition: width 0.3s ease;
+}
+
+.question-card {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.question-number {
+    color: #667eea;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.question-text {
+    font-size: 1.2rem;
+    margin-bottom: 25px;
+    line-height: 1.6;
+}
+
+    .question-text code {
+        background: #f4f4f4;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+.option {
+    margin-bottom: 12px;
+}
+
+    .option label {
+        margin-left: 10px;
+        cursor: pointer;
+    }
+
+.attachments {
+    margin-bottom: 20px;
+}
+
+.attachment-img {
+    max-width: 100%;
+    border-radius: 10px;
+    margin-top: 10px;
+}
+
+.manual-answer {
+    width: 100%;
+    min-height: 200px;
+    padding: 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    font-family: monospace;
+    background-color: white;
+    color: #212529;
+    display: block;
+}
+
+.nav-buttons {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+.btn-nav {
+    padding: 12px 30px;
+    border-radius: 30px;
+    font-weight: 600;
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border: none;
+}
+
+.question-type-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.type-auto {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.type-manual {
+    background: #fff3e0;
+    color: #f57c00;
+}
