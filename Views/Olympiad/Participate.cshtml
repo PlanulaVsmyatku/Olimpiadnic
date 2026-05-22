@@ -166,19 +166,24 @@
     <script>
             // Обработка отправки формы для checkbox
             document.getElementById('answerForm').addEventListener('submit', function(e) {
-                var checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
-                var radioboxes = document.querySelectorAll('input[type="radio"]:checked');
+                // Обработка и для radio, и для checkbox
+                var selectedIds = [];
 
-                var selectedIds = Array.from(checkboxes).map(cb => cb.value);
+                // Собираем выбранные radio (всего один будет)
+                var selectedRadio = document.querySelector('input[type="radio"]:checked');
+                if (selectedRadio) {
+                    selectedIds.push(selectedRadio.value);
+                }
 
-                // Создаем скрытые поля для каждого выбранного ID
-                var form = this;
+                // Собираем выбранные checkbox
+                var selectedCheckboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+                selectedCheckboxes.forEach(cb => selectedIds.push(cb.value));
 
-                // Удаляем старые значения
+                // Удаляем старые поля
                 var oldInputs = form.querySelectorAll('input[name="SelectedOptionIds"]');
                 oldInputs.forEach(input => input.remove());
 
-                // Добавляем новые
+                // Добавляем новые поля (для radio это будет одно поле, для checkbox - несколько)
                 selectedIds.forEach(id => {
                     var input = document.createElement('input');
                     input.type = 'hidden';
