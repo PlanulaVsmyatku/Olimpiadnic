@@ -24,12 +24,11 @@ namespace Olimpiadnic.Services
         /// </summary>
         public async Task<OlympiadParticipationViewModel> CreateSessionAsync(
             int olympiadId,
-            int userId,
             int participantId,
             List<Question> questions)
         {
             // Проверяем, не существует ли уже сессия
-            var existingSession = GetSession(olympiadId);
+            var existingSession = GetSession(olympiadId, participantId);
             if (existingSession != null)
             {
                 // Если сессия существует, возвращаем её
@@ -91,10 +90,36 @@ namespace Olimpiadnic.Services
         /// <summary>
         /// Получение существующей сессии (для восстановления черновика)
         /// </summary>
-        public OlympiadParticipationViewModel? GetSession(int olympiadId)
+        public OlympiadParticipationViewModel? GetSession(int olympiadId, int participantId)
         {
-            var key = $"{SessionKeyPrefix}{olympiadId}";
+            var key = $"{SessionKeyPrefix}{olympiadId}{participantId}";
             return _httpContextAccessor.HttpContext?.Session.GetObject<OlympiadParticipationViewModel>(key);
+        }
+
+        /// <summary>
+        /// Сохранение сессии
+        /// </summary>
+        private void SaveSession(OlympiadParticipationViewModel session)
+        {
+            var key = $"{SessionKeyPrefix}{session.OlympiadId}{session.ParticipantId}";
+            _httpContextAccessor.HttpContext?.Session.SetObject(key, session);
+        }
+
+        /// <summary>
+        /// Удаление сессии (при завершении олимпиады)
+        /// </summary>
+        public void DeleteSession(OlympiadParticipationViewModel session)
+        {
+            var key = $"{SessionKeyPrefix}{session.OlympiadId}{session.ParticipantId}";
+            _httpContextAccessor.HttpContext?.Session.Remove(key);
+        }
+
+        /// <summary>
+        /// Проверка существования сессии
+        /// </summary>
+        public bool SessionExists(int olympiadId, int participantId)
+        {
+            return GetSession(olympiadId, participantId) != null;
         }
 
         /// <summary>
@@ -109,9 +134,8 @@ namespace Olimpiadnic.Services
         /// <summary>
         /// Обновление ответа на конкретный вопрос
         /// </summary>
-        public void UpdateAnswer(int olympiadId, int questionIndex, QuestionParticipationViewModel answer)
+        public void UpdateAnswer(OlympiadParticipationViewModel session, int questionIndex, QuestionParticipationViewModel answer)
         {
-            var session = GetSession(olympiadId);
             if (session == null) return;
 
             if (questionIndex >= 0 && questionIndex < session.Questions.Count && answer != null)
@@ -125,9 +149,8 @@ namespace Olimpiadnic.Services
         /// <summary>
         /// Обновление текущего индекса вопроса
         /// </summary>
-        public void UpdateCurrentQuestionIndex(int olympiadId, int newIndex)
+        public void UpdateCurrentQuestionIndex(OlympiadParticipationViewModel session, int newIndex)
         {
-            var session = GetSession(olympiadId);
             if (session == null) return;
 
             if (newIndex >= 0 && newIndex < session.TotalQuestions)
@@ -137,31 +160,6 @@ namespace Olimpiadnic.Services
             }
         }
 
-        /// <summary>
-        /// Удаление сессии (при завершении олимпиады)
-        /// </summary>
-        public void DeleteSession(int olympiadId)
-        {
-            var key = $"{SessionKeyPrefix}{olympiadId}";
-            _httpContextAccessor.HttpContext?.Session.Remove(key);
-        }
-
-        /// <summary>
-        /// Проверка существования сессии
-        /// </summary>
-        public bool SessionExists(int olympiadId)
-        {
-            return GetSession(olympiadId) != null;
-        }
-
-        /// <summary>
-        /// Сохранение сессии
-        /// </summary>
-        private void SaveSession(OlympiadParticipationViewModel session)
-        {
-            var key = $"{SessionKeyPrefix}{session.OlympiadId}";
-            _httpContextAccessor.HttpContext?.Session.SetObject(key, session);
-        }
 
         /// <summary>
         /// Получение вложений вопроса
@@ -175,9 +173,8 @@ namespace Olimpiadnic.Services
         /// <summary>
         /// Получение конкретного вопроса из сессии с сохраненными ответами
         /// </summary>
-        public QuestionParticipationViewModel? GetQuestionFromSession(int olympiadId, int questionIndex)
+        public QuestionParticipationViewModel? GetQuestionFromSession(OlympiadParticipationViewModel session, int questionIndex)
         {
-            var session = GetSession(olympiadId);
             if (session == null) return null;
 
             if (questionIndex < 0 || questionIndex >= session.Questions.Count)
@@ -209,12 +206,11 @@ namespace Olimpiadnic.Services
         /// <summary>
         /// Получение текущего вопроса из сессии
         /// </summary>
-        public QuestionParticipationViewModel? GetCurrentQuestion(int olympiadId)
+        public QuestionParticipationViewModel? GetCurrentQuestion(OlympiadParticipationViewModel session)
         {
-            var session = GetSession(olympiadId);
             if (session == null) return null;
 
-            return GetQuestionFromSession(olympiadId, session.CurrentQuestionIndex);
+            return GetQuestionFromSession(session, session.CurrentQuestionIndex);
         }
 
     }

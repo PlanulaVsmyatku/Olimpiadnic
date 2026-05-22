@@ -161,32 +161,7 @@
 </div>
 
 <script>
-    function goToPrevious() {
-        var form = document.createElement('form');
-        form.method = 'post';
-        form.action = '@Url.Action("PreviousQuestion", "Olympiad")';
-        
-        var antiForgeryToken = document.createElement('input');
-        antiForgeryToken.type = 'hidden';
-        antiForgeryToken.name = '__RequestVerificationToken';
-        antiForgeryToken.value = document.querySelector('input[name="__RequestVerificationToken"]').value;
-        form.appendChild(antiForgeryToken);
-        
-        var olympiadId = document.createElement('input');
-        olympiadId.type = 'hidden';
-        olympiadId.name = 'olympiadId';
-        olympiadId.value = '@Model.OlympiadId';
-        form.appendChild(olympiadId);
-        
-        var currentIndex = document.createElement('input');
-        currentIndex.type = 'hidden';
-        currentIndex.name = 'currentIndex';
-        currentIndex.value = '@Model.CurrentQuestionIndex';
-        form.appendChild(currentIndex);
-        
-        document.body.appendChild(form);
-        form.submit();
-    }
+
 </script>
 
 </body>

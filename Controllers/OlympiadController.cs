@@ -187,6 +187,7 @@ namespace Olimpiadnic.Controllers
         [Authorize]
         public async Task<IActionResult> Participate(int id)
         {
+            #region Проверки
             // Проверка прав и времени
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
@@ -231,19 +232,18 @@ namespace Olimpiadnic.Controllers
                 participant.StartedAt = now;
                 await _olympiadRepository.UpdateParticipantAsync(participant);
             }
-
-            var sessionService = HttpContext.RequestServices.GetRequiredService<IOlympiadSessionService>();
+            #endregion
 
             // Получаем или создаем сессию
             OlympiadParticipationViewModel participation;
-            var existingSession = sessionService.GetSession(id);
+            var existingSession = _sessionService.GetSession(id, participant.ParticipantId);
 
             if (existingSession != null)
             {
                 participation = existingSession;
 
                 // Получаем текущий вопрос с сохраненными ответами
-                var currentQuestion = sessionService.GetCurrentQuestion(id);
+                var currentQuestion = _sessionService.GetCurrentQuestion(participation);
                 if (currentQuestion != null)
                 {
                     // Обновляем текущий вопрос в модели
@@ -256,7 +256,7 @@ namespace Olimpiadnic.Controllers
             {
                 // Создаем новую сессию
                 var questions = await _olympiadRepository.GetQuestionsForParticipationAsync(id);
-                participation = await sessionService.CreateSessionAsync(id, userId, participant.ParticipantId, questions);
+                participation = await _sessionService.CreateSessionAsync(id, participant.ParticipantId, questions);
             }
 
             return View(participation);
@@ -271,12 +271,6 @@ namespace Olimpiadnic.Controllers
             );
         }
 
-        // Вспомогательный метод для загрузки сохранённых ответов из черновика БД (если есть)
-        private async Task LoadSavedAnswersToSessionAsync(OlympiadParticipationViewModel participation, int participantId)
-        {
-            
-        }
-
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
@@ -284,10 +278,8 @@ namespace Olimpiadnic.Controllers
         {
             try
             {
-                var sessionService = HttpContext.RequestServices.GetRequiredService<IOlympiadSessionService>();
-
                 // Получаем текущую сессию
-                var session = sessionService.GetSession(model.OlympiadId);
+                var session = _sessionService.GetSession(model.OlympiadId, model.ParticipantId);
 
                 if (session == null)
                 {
@@ -321,7 +313,7 @@ namespace Olimpiadnic.Controllers
                     }
 
                     // Обновляем ответ в сессии
-                    sessionService.UpdateAnswer(model.OlympiadId, model.CurrentQuestionIndex, currentQuestion);
+                    _sessionService.UpdateAnswer(session, model.CurrentQuestionIndex, currentQuestion);
                 }
 
                 // Навигация в зависимости от действия
@@ -330,8 +322,7 @@ namespace Olimpiadnic.Controllers
                     case "previous":
                         if (model.CurrentQuestionIndex > 0)
                         {
-                            var newIndex = model.CurrentQuestionIndex - 1;
-                            sessionService.UpdateCurrentQuestionIndex(model.OlympiadId, newIndex);
+                            _sessionService.UpdateCurrentQuestionIndex(session, model.CurrentQuestionIndex - 1);
                             
                         }
                         break;
@@ -339,8 +330,7 @@ namespace Olimpiadnic.Controllers
                     case "next":
                         if (model.CurrentQuestionIndex + 1 < session.TotalQuestions)
                         {
-                            var newIndex = model.CurrentQuestionIndex + 1;
-                            sessionService.UpdateCurrentQuestionIndex(model.OlympiadId, newIndex);
+                            _sessionService.UpdateCurrentQuestionIndex(session, model.CurrentQuestionIndex + 1);
                         }
                         break;
 
@@ -389,8 +379,11 @@ namespace Olimpiadnic.Controllers
         [Authorize]
         public async Task<IActionResult> ConfirmSubmit(int id)
         {
-            var sessionService = HttpContext.RequestServices.GetRequiredService<IOlympiadSessionService>();
-            var session = sessionService.GetSession(id);
+            // Нужны проверки - Проверка прав, не закончилась ли олимпиада, зарегестрирован ли пользователь на оилмпиаду
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var participant = await _olympiadRepository.GetOrCreateParticipantAsync(id, int.Parse(userIdClaim));
+
+            var session = _sessionService.GetSession(id, participant.ParticipantId);
 
             if (session == null)
             {
@@ -416,8 +409,11 @@ namespace Olimpiadnic.Controllers
         {
             try
             {
-                var sessionService = HttpContext.RequestServices.GetRequiredService<IOlympiadSessionService>();
-                var session = sessionService.GetSession(id);
+                // Нужны проверки - Проверка прав, не закончилась ли олимпиада, зарегестрирован ли пользователь на оилмпиаду
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var participant = await _olympiadRepository.GetOrCreateParticipantAsync(id, int.Parse(userIdClaim));
+
+                var session = _sessionService.GetSession(id, participant.ParticipantId);
 
                 if (session == null)
                 {
@@ -435,7 +431,7 @@ namespace Olimpiadnic.Controllers
                 await _olympiadRepository.CompleteOlympiadAsync(session.ParticipantId, totalScore);
 
                 // Удаляем сессию
-                sessionService.DeleteSession(id);
+                _sessionService.DeleteSession(session);
 
                 _logger.LogInformation($"Олимпиада {id} завершена для участника {session.ParticipantId}. Результат: {totalScore}");
 

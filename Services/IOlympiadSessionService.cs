@@ -11,14 +11,13 @@ namespace Olimpiadnic.Services
         /// </summary>
         Task<OlympiadParticipationViewModel> CreateSessionAsync(
             int olympiadId,
-            int userId,
             int participantId,
             List<Question> questions);
 
         /// <summary>
-        /// Получение существующей сессии (для восстановления черновика)
+        /// Получение существующей сессии (восстановление, адресация к конкретной сессии)
         /// </summary>
-        OlympiadParticipationViewModel? GetSession(int olympiadId);
+        OlympiadParticipationViewModel? GetSession(int olympiadId, int participantId);
 
         /// <summary>
         /// Обновление сессии (сохранение ответов и текущего индекса)
@@ -28,12 +27,12 @@ namespace Olimpiadnic.Services
         /// <summary>
         /// Обновление ответа на конкретный вопрос
         /// </summary>
-        void UpdateAnswer(int olympiadId, int questionIndex, QuestionParticipationViewModel answer);
+        void UpdateAnswer(OlympiadParticipationViewModel session, int questionIndex, QuestionParticipationViewModel answer);
 
         /// <summary>
         /// Обновление текущего индекса вопроса
         /// </summary>
-        void UpdateCurrentQuestionIndex(int olympiadId, int newIndex);
+        void UpdateCurrentQuestionIndex(OlympiadParticipationViewModel session, int newIndex);
 
         /// <summary>
         /// Получение конкретного вопроса из сессии с сохраненными ответами
@@ -41,22 +40,22 @@ namespace Olimpiadnic.Services
         /// <param name="olympiadId">ID олимпиады</param>
         /// <param name="questionIndex">Индекс вопроса (0-based)</param>
         /// <returns>Вопрос с ответами пользователя или null если не найден</returns>
-        QuestionParticipationViewModel? GetQuestionFromSession(int olympiadId, int questionIndex);
+        QuestionParticipationViewModel? GetQuestionFromSession(OlympiadParticipationViewModel session, int questionIndex);
 
         /// <summary>
         /// Получение текущего вопроса из сессии
         /// </summary>
-        QuestionParticipationViewModel? GetCurrentQuestion(int olympiadId);
+        QuestionParticipationViewModel? GetCurrentQuestion(OlympiadParticipationViewModel session);
 
         /// <summary>
         /// Удаление сессии (при завершении олимпиады)
         /// </summary>
-        void DeleteSession(int olympiadId);
+        void DeleteSession(OlympiadParticipationViewModel session);
 
         /// <summary>
         /// Проверка существования сессии
         /// </summary>
-        bool SessionExists(int olympiadId);
+        bool SessionExists(int olympiadId, int participantId);
     }
 }
 
