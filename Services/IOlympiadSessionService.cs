@@ -35,7 +35,7 @@ namespace Olimpiadnic.Services
         void UpdateCurrentQuestionIndex(OlympiadParticipationViewModel session, int newIndex);
 
         /// <summary>
-        /// Получение конкретного вопроса из сессии с сохраненными ответами
+        /// Получение копии конкретного вопроса из сессии с сохраненными ответами
         /// </summary>
         /// <param name="olympiadId">ID олимпиады</param>
         /// <param name="questionIndex">Индекс вопроса (0-based)</param>
@@ -43,7 +43,7 @@ namespace Olimpiadnic.Services
         QuestionParticipationViewModel? GetQuestionFromSession(OlympiadParticipationViewModel session, int questionIndex);
 
         /// <summary>
-        /// Получение текущего вопроса из сессии
+        /// Получение копии текущего вопроса из сессии
         /// </summary>
         QuestionParticipationViewModel? GetCurrentQuestion(OlympiadParticipationViewModel session);
 

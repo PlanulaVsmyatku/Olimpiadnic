@@ -242,6 +242,7 @@ namespace Olimpiadnic.Controllers
             {
                 participation = existingSession;
 
+                /*
                 // Получаем текущий вопрос с сохраненными ответами
                 var currentQuestion = _sessionService.GetCurrentQuestion(participation);
                 if (currentQuestion != null)
@@ -249,7 +250,7 @@ namespace Olimpiadnic.Controllers
                     // Обновляем текущий вопрос в модели
                     participation.Questions[participation.CurrentQuestionIndex] = currentQuestion;
                 }
-
+                */
                 _logger.LogInformation($"Восстановлена сессия. Текущий вопрос: {participation.CurrentQuestionIndex + 1}, Ответов сохранено: {CountAnsweredQuestions(participation)}");
             }
             else
@@ -274,10 +275,13 @@ namespace Olimpiadnic.Controllers
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveAnswer(OlympiadParticipationViewModel model, string action)
+        public async Task<IActionResult> SaveAnswer(SaveAnswerViewModel model, string action)
         {
             try
             {
+                // Сохраняем action из параметра или из модели
+                string userAction = !string.IsNullOrEmpty(action) ? action : model.Action;
+
                 // Получаем текущую сессию
                 var session = _sessionService.GetSession(model.OlympiadId, model.ParticipantId);
 
@@ -289,41 +293,34 @@ namespace Olimpiadnic.Controllers
                 }
 
                 // Сохраняем ответ на текущий вопрос, если он изменился
-                if (model.CurrentQuestion != null && model.CurrentQuestionIndex >= 0 && model.CurrentQuestionIndex < session.Questions.Count)
+                if (model.CurrentQuestionIndex >= 0 && model.CurrentQuestionIndex < session.Questions.Count)
                 {
-                    // Копируем ответы из модели в сессию
                     var currentQuestion = session.Questions[model.CurrentQuestionIndex];
 
-                    // Сохраняем выбранные варианты
-                    if (model.CurrentQuestion.SelectedOptionIds != null)
+                    // Проверяем тип вопроса из сессии, а не из модели
+                    if (currentQuestion.Type.StartsWith("auto"))
                     {
-                        currentQuestion.SelectedOptionIds = new List<int>(model.CurrentQuestion.SelectedOptionIds);
-
-                        // Обновляем IsSelected для каждого варианта
+                        currentQuestion.SelectedOptionIds = model.SelectedOptionIds ?? new List<int>();
                         foreach (var option in currentQuestion.Options)
                         {
                             option.IsSelected = currentQuestion.SelectedOptionIds.Contains(option.OptionId);
                         }
                     }
-
-                    // Сохраняем ручной ответ
-                    if (model.CurrentQuestion.ManualAnswer != null)
+                    else if (currentQuestion.Type == "manual")
                     {
-                        currentQuestion.ManualAnswer = model.CurrentQuestion.ManualAnswer;
+                        currentQuestion.ManualAnswer = model.ManualAnswer?.Trim() ?? string.Empty;
                     }
 
-                    // Обновляем ответ в сессии
                     _sessionService.UpdateAnswer(session, model.CurrentQuestionIndex, currentQuestion);
                 }
 
                 // Навигация в зависимости от действия
-                switch (action)
+                switch (userAction)
                 {
                     case "previous":
                         if (model.CurrentQuestionIndex > 0)
                         {
                             _sessionService.UpdateCurrentQuestionIndex(session, model.CurrentQuestionIndex - 1);
-                            
                         }
                         break;
 

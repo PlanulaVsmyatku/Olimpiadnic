@@ -1,3 +1,5 @@
+@using Olimpiadnic.Services
+@inject IOlympiadSessionService sessionService
 @using Olimpiadnic.Models.OlympiadModels
 @model OlympiadParticipationViewModel
 
@@ -59,27 +61,27 @@
                     <img src="@attachment" class="attachment-img" alt="Вложение к вопросу" />
                 }
             </div>
-        }
-                <form asp-action="SaveAnswer" method="post" id="answerForm">
+            }
+            <form asp-action="SaveAnswer" method="post" id="answerForm">
                 @Html.AntiForgeryToken()
 
-                <input type="hidden" asp-for="OlympiadId" />
-                <input type="hidden" asp-for="ParticipantId" />
-                <input type="hidden" asp-for="CurrentQuestionIndex" />
-                <input type="hidden" asp-for="TotalQuestions" />
-                <input type="hidden" name="CurrentQuestion.QuestionId" value="@Model.CurrentQuestion.QuestionId" />
-                <input type="hidden" name="CurrentQuestion.Type" value="@Model.CurrentQuestion.Type" />
+                <!-- Основные скрытые поля -->
+                <input type="hidden" name="OlympiadId" value="@Model.OlympiadId" />
+                <input type="hidden" name="ParticipantId" value="@Model.ParticipantId" />
+                <input type="hidden" name="CurrentQuestionIndex" value="@Model.CurrentQuestionIndex" />
+                <input type="hidden" name="TotalQuestions" value="@Model.TotalQuestions" />
+                <input type="hidden" name="QuestionId" value="@Model.CurrentQuestion.QuestionId" />
+                <input type="hidden" name="QuestionType" value="@Model.CurrentQuestion.Type" />
 
                 @if (Model.CurrentQuestion.Type == "auto-radio")
                 {
-                    <!-- Одиночный выбор (radio) -->
                     <div class="options-container">
                         @for (int i = 0; i < Model.CurrentQuestion.Options.Count; i++)
                         {
                             var option = Model.CurrentQuestion.Options[i];
                             <div class="option">
                                 <input type="radio"
-                                       name="CurrentQuestion.SelectedOptionIds"
+                                       name="SelectedOptionIds"
                                        value="@option.OptionId"
                                        id="opt_@option.OptionId"
                                 @(option.IsSelected ? "checked" : "") />
@@ -90,14 +92,13 @@
                 }
                 else if (Model.CurrentQuestion.Type == "auto-checkbox")
                 {
-                    <!-- Множественный выбор (checkbox) -->
                     <div class="options-container">
                         @for (int i = 0; i < Model.CurrentQuestion.Options.Count; i++)
                         {
                             var option = Model.CurrentQuestion.Options[i];
                             <div class="option">
                                 <input type="checkbox"
-                                       name="CurrentQuestion.SelectedOptionIds"
+                                       name="SelectedOptionIds"
                                        value="@option.OptionId"
                                        id="opt_@option.OptionId"
                                 @(option.IsSelected ? "checked" : "") />
@@ -108,8 +109,7 @@
                 }
                 else if (Model.CurrentQuestion.Type == "manual")
                 {
-                    <!-- Развёрнутый ответ -->
-                    <textarea name="CurrentQuestion.ManualAnswer"
+                    <textarea name="ManualAnswer"
                               class="manual-answer"
                               placeholder="Введите ваш ответ здесь...">@Model.CurrentQuestion.ManualAnswer</textarea>
                 }
@@ -150,6 +150,9 @@
                 Type = "@Model.CurrentQuestion.Type",
                 Options count = @Model.CurrentQuestion.Options.Count
                 CurrentQuestionIndex = @Model.CurrentQuestionIndex
+                participantId = @Model.ParticipantId
+                sessionKey = "{@Model.OlympiadId}:{@Model.ParticipantId}"
+                sessionExists = @sessionService.SessionExists(Model.OlympiadId,Model.ParticipantId)
             </div>
 
     </div>
@@ -160,9 +163,31 @@
     </div>
 </div>
 
-<script>
+    <script>
+            // Обработка отправки формы для checkbox
+            document.getElementById('answerForm').addEventListener('submit', function(e) {
+                var checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+                var radioboxes = document.querySelectorAll('input[type="radio"]:checked');
 
-</script>
+                var selectedIds = Array.from(checkboxes).map(cb => cb.value);
+
+                // Создаем скрытые поля для каждого выбранного ID
+                var form = this;
+
+                // Удаляем старые значения
+                var oldInputs = form.querySelectorAll('input[name="SelectedOptionIds"]');
+                oldInputs.forEach(input => input.remove());
+
+                // Добавляем новые
+                selectedIds.forEach(id => {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'SelectedOptionIds';
+                    input.value = id;
+                    form.appendChild(input);
+                });
+            });
+    </script>
 
 </body>
 </html>

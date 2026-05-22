@@ -47,7 +47,27 @@ namespace Olimpiadnic.Models.OlympiadModels
         public bool IsSelected { get; set; }
     }
 
+    // модель ТОЛЬКО для POST-запроса SaveAnswer
+    public class SaveAnswerViewModel
+    {
+        public int OlympiadId { get; set; }
+        public int ParticipantId { get; set; }
+        public int CurrentQuestionIndex { get; set; }
+        public int TotalQuestions { get; set; }
 
+        // Только нужные поля для текущего вопроса
+        public int QuestionId { get; set; }
+        public string QuestionType { get; set; } = string.Empty;
+
+        // Для auto-вопросов
+        public List<int> SelectedOptionIds { get; set; } = new();
+
+        // Для manual-вопросов
+        public string ManualAnswer { get; set; } = string.Empty;
+
+        // Действие (previous, next, submit)
+        public string Action { get; set; } = string.Empty;
+    }
 
     #endregion
 }

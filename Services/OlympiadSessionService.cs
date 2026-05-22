@@ -204,7 +204,7 @@ namespace Olimpiadnic.Services
         }
 
         /// <summary>
-        /// Получение текущего вопроса из сессии
+        /// Получение копии текущего вопроса из сессии
         /// </summary>
         public QuestionParticipationViewModel? GetCurrentQuestion(OlympiadParticipationViewModel session)
         {
