@@ -98,4 +98,6 @@ app.MapControllerRoute(
     pattern: "Olympiad/Details/{id}",
     defaults: new { controller = "Olympiad", action = "Details" });
 
+app.MapControllers();
+
 app.Run();

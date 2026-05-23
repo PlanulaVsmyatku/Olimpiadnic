@@ -4,7 +4,7 @@
 @model OlympiadParticipationViewModel
 
 @{
-    ViewData["Title"] = $"{Model.OlympiadTitle} - Вопрос {Model.CurrentQuestionIndex + 1} из {Model.TotalQuestions}";
+    ViewData["Title"] = $"{Model.OlympiadTitle} - Прохождение олимпиады";
 }
 
 <!DOCTYPE html>
@@ -15,184 +15,500 @@
 <body>
 
 <div class="container py-4">
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i> Загрузка...
+        </div>
+    </div>
+    
+    <div id="autoSaveIndicator" class="auto-save-indicator">
+        <i class="fas fa-save"></i> Сохранено
+    </div>
+
     <!-- Заголовок и прогресс -->
     <div class="progress-container">
         <div class="d-flex justify-content-between mb-2">
             <h5 class="mb-0">@Model.OlympiadTitle</h5>
-            <span class="text-muted">Вопрос @(Model.CurrentQuestionIndex + 1) из @Model.TotalQuestions</span>
+            <span class="text-muted" id="questionCounter">Вопрос 1 из @Model.TotalQuestions</span>
         </div>
         <div class="progress-bar-custom">
-            <div class="progress-fill" style="width: @((Model.CurrentQuestionIndex + 1) * 100 / Model.TotalQuestions)%"></div>
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
         </div>
     </div>
 
-        <!--Уведомление о черновике-->
-        @if (Model != null && Model.CurrentQuestionIndex > 0)
-        {
-            <div class="alert alert-info">
-                <i class="fas fa-save"></i> Ваш прогресс сохранен. Вы остановились на вопросе @(Model.CurrentQuestionIndex + 1).
-            </div>
-        }
-    
+    <!-- Пагинация вопросов -->
+    <div id="paginationContainer" class="pagination-nav"></div>
+
     <!-- Карточка вопроса -->
-    <div class="question-card">
+    <div class="question-card" id="questionCard">
         <!-- Тип вопроса -->
-        <div class="question-type-badge @(Model.CurrentQuestion.Type.StartsWith("auto") ? "type-auto" : "type-manual")">
-            <i class="fas @(Model.CurrentQuestion.Type.StartsWith("auto") ? "fa-check-circle" : "fa-pen") me-1"></i>
-            @(Model.CurrentQuestion.Type.StartsWith("auto") ? "Тестовое задание" : "Развёрнутый ответ")
+        <div class="question-type-badge" id="questionTypeBadge">
+            <i class="fas me-1"></i>
+            <span id="questionTypeText"></span>
         </div>
         
         <!-- Номер вопроса -->
         <div class="question-number">
-            <i class="fas fa-question-circle me-2"></i>Вопрос @Model.CurrentQuestion.OrderNumber
+            <i class="fas fa-question-circle me-2"></i>
+            <span id="questionNumber">Вопрос</span>
         </div>
         
         <!-- Текст вопроса -->
-        <div class="question-text">
-            @Html.Raw(Model.CurrentQuestion.Description)
+        <div class="question-text" id="questionText">
         </div>
         
-        <!-- Вложения (изображения) -->
-        @if (Model.CurrentQuestion.Attachments.Any())
-        {
-            <div class="attachments">
-                @foreach (var attachment in Model.CurrentQuestion.Attachments)
-                {
-                    <img src="@attachment" class="attachment-img" alt="Вложение к вопросу" />
-                }
-            </div>
-            }
-            <form asp-action="SaveAnswer" method="post" id="answerForm">
-                @Html.AntiForgeryToken()
+        <!-- Вложения -->
+        <div class="attachments" id="attachmentsContainer"></div>
+        
+        <!-- Форма ответа -->
+        <div id="answerContainer"></div>
 
-                <!-- Основные скрытые поля -->
-                <input type="hidden" name="OlympiadId" value="@Model.OlympiadId" />
-                <input type="hidden" name="ParticipantId" value="@Model.ParticipantId" />
-                <input type="hidden" name="CurrentQuestionIndex" value="@Model.CurrentQuestionIndex" />
-                <input type="hidden" name="TotalQuestions" value="@Model.TotalQuestions" />
-                <input type="hidden" name="QuestionId" value="@Model.CurrentQuestion.QuestionId" />
-                <input type="hidden" name="QuestionType" value="@Model.CurrentQuestion.Type" />
-
-                @if (Model.CurrentQuestion.Type == "auto-radio")
-                {
-                    <div class="options-container">
-                        @for (int i = 0; i < Model.CurrentQuestion.Options.Count; i++)
-                        {
-                            var option = Model.CurrentQuestion.Options[i];
-                            <div class="option">
-                                <input type="radio"
-                                       name="SelectedOptionIds"
-                                       value="@option.OptionId"
-                                       id="opt_@option.OptionId"
-                                @(option.IsSelected ? "checked" : "") />
-                                <label for="opt_@option.OptionId">@option.OptionText</label>
-                            </div>
-                        }
-                    </div>
-                }
-                else if (Model.CurrentQuestion.Type == "auto-checkbox")
-                {
-                    <div class="options-container">
-                        @for (int i = 0; i < Model.CurrentQuestion.Options.Count; i++)
-                        {
-                            var option = Model.CurrentQuestion.Options[i];
-                            <div class="option">
-                                <input type="checkbox"
-                                       name="SelectedOptionIds"
-                                       value="@option.OptionId"
-                                       id="opt_@option.OptionId"
-                                @(option.IsSelected ? "checked" : "") />
-                                <label for="opt_@option.OptionId">@option.OptionText</label>
-                            </div>
-                        }
-                    </div>
-                }
-                else if (Model.CurrentQuestion.Type == "manual")
-                {
-                    <textarea name="ManualAnswer"
-                              class="manual-answer"
-                              placeholder="Введите ваш ответ здесь...">@Model.CurrentQuestion.ManualAnswer</textarea>
-                }
-
-                <!-- Кнопки навигации -->
-                <div class="nav-buttons mt-4">
-                    @if (Model.CurrentQuestionIndex > 0)
-                    {
-                        <button type="submit" name="action" value="previous" class="btn btn-outline-secondary btn-nav">
-                            <i class="fas fa-arrow-left me-2"></i>Назад
-                        </button>
-                    }
-                    else
-                    {
-                        <div></div>
-                    }
-
-                    @if (Model.CurrentQuestionIndex + 1 < Model.TotalQuestions)
-                    {
-                        <button type="submit" name="action" value="next" class="btn btn-primary btn-nav">
-                            Далее<i class="fas fa-arrow-right ms-2"></i>
-                        </button>
-                    }
-                    else
-                    {
-                        <button type="submit" name="action" value="submit" class="btn btn-submit btn-nav">
-                            <i class="fas fa-check-circle me-2"></i>Завершить олимпиаду
-                        </button>
-                    }
-                </div>
-            </form>
-            
-
-            <!-- Временная отладка -->
-            <div style="background: yellow; padding: 10px; margin: 10px 0;">
-                <strong>Debug:</strong>
-                QuestionId = @Model.CurrentQuestion.QuestionId,
-                Type = "@Model.CurrentQuestion.Type",
-                Options count = @Model.CurrentQuestion.Options.Count
-                CurrentQuestionIndex = @Model.CurrentQuestionIndex
-                participantId = @Model.ParticipantId
-                sessionKey = "{@Model.OlympiadId}:{@Model.ParticipantId}"
-                sessionExists = @sessionService.SessionExists(Model.OlympiadId,Model.ParticipantId)
-            </div>
-
+        <!-- Кнопки навигации -->
+        <div class="nav-buttons mt-4">
+            <button id="prevButton" class="btn btn-outline-secondary btn-nav" style="display: none;">
+                <i class="fas fa-arrow-left me-2"></i>Назад
+            </button>
+            <button id="nextButton" class="btn btn-primary btn-nav" style="display: none;">
+                Далее<i class="fas fa-arrow-right ms-2"></i>
+            </button>
+            <button id="submitButton" class="btn btn-submit btn-nav" style="display: none;">
+                <i class="fas fa-check-circle me-2"></i>Завершить олимпиаду
+            </button>
+        </div>
     </div>
     
-    <!-- Таймер (опционально) -->
     <div class="text-center text-light mt-3">
-        <small><i class="fas fa-clock me-1 "></i>Убедитесь, что у вас есть стабильное интернет-соединение</small>
+        <small><i class="fas fa-clock me-1"></i>Убедитесь, что у вас есть стабильное интернет-соединение</small>
     </div>
 </div>
 
-    <script>
-            // Обработка отправки формы для checkbox
-            document.getElementById('answerForm').addEventListener('submit', function(e) {
-                // Обработка и для radio, и для checkbox
-                var selectedIds = [];
+<script>
+// Конфигурация
+const olympiadId = @Model.OlympiadId;
+const participantId = @Model.ParticipantId;
+let currentIndex = @Model.CurrentQuestionIndex;
+let totalQuestions = @Model.TotalQuestions;
+let autoSaveTimer = null;
+let isSaving = false;
 
-                // Собираем выбранные radio (всего один будет)
-                var selectedRadio = document.querySelector('input[type="radio"]:checked');
-                if (selectedRadio) {
-                    selectedIds.push(selectedRadio.value);
+// DOM элементы
+const loadingOverlay = document.getElementById('loadingOverlay');
+const autoSaveIndicator = document.getElementById('autoSaveIndicator');
+const questionCounter = document.getElementById('questionCounter');
+const progressFill = document.getElementById('progressFill');
+const paginationContainer = document.getElementById('paginationContainer');
+const questionTypeBadge = document.getElementById('questionTypeBadge');
+const questionTypeText = document.getElementById('questionTypeText');
+const questionNumber = document.getElementById('questionNumber');
+const questionText = document.getElementById('questionText');
+const attachmentsContainer = document.getElementById('attachmentsContainer');
+const answerContainer = document.getElementById('answerContainer');
+const prevButton = document.getElementById('prevButton');
+const nextButton = document.getElementById('nextButton');
+const submitButton = document.getElementById('submitButton');
+
+// Показать/скрыть загрузку
+function showLoading() {
+    loadingOverlay.style.display = 'flex';
+}
+
+function hideLoading() {
+    loadingOverlay.style.display = 'none';
+}
+
+// Показать индикатор автосохранения
+function showAutoSaveIndicator() {
+    autoSaveIndicator.style.opacity = '1';
+    setTimeout(() => {
+        autoSaveIndicator.style.opacity = '0';
+    }, 1500);
+}
+
+// Получить текущие ответы для сохранения
+function getCurrentAnswers() {
+    const questionType = document.querySelector('[data-question-type]')?.dataset.questionType;
+    
+    if (questionType?.startsWith('auto')) {
+        const selectedOptions = [];
+        document.querySelectorAll('input[name="selectedOptions"]:checked').forEach(cb => {
+            selectedOptions.push(parseInt(cb.value));
+        });
+        return { selectedOptionIds: selectedOptions, manualAnswer: null };
+    } else if (questionType === 'manual') {
+        const manualAnswer = document.querySelector('[data-manual-answer]')?.value || '';
+        return { selectedOptionIds: null, manualAnswer: manualAnswer };
+    }
+    return { selectedOptionIds: [], manualAnswer: null };
+}
+
+// Сохранить ответ без навигации (автосохранение)
+async function autoSaveAnswer() {
+    if (isSaving) return;
+    
+    const answers = getCurrentAnswers();
+    
+    try {
+        isSaving = true;
+        const response = await fetch('/api/olympiad/save-answer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                olympiadId: olympiadId,
+                participantId: participantId,
+                questionIndex: currentIndex,
+                selectedOptionIds: answers.selectedOptionIds,
+                manualAnswer: answers.manualAnswer
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            showAutoSaveIndicator();
+            // Обновляем статус вопроса в пагинации
+            updatePaginationItemStatus(currentIndex, data.isAnswered);
+            updateProgress(data.answeredCount);
+        }
+    } catch (error) {
+        console.error('Auto-save error:', error);
+    } finally {
+        isSaving = false;
+    }
+}
+
+// Запуск автосохранения с debounce
+function triggerAutoSave() {
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+        autoSaveAnswer();
+    }, 1000);
+}
+
+// Обновление пагинации
+function updatePaginationItemStatus(index, isAnswered) {
+    const item = document.querySelector(`.pagination-item[data-index="${index}"]`);
+    if (item) {
+        item.classList.remove('answered', 'unanswered');
+        item.classList.add(isAnswered ? 'answered' : 'unanswered');
+    }
+}
+
+// Обновление прогресс-бара
+function updateProgress(answeredCount) {
+    const percent = (answeredCount / totalQuestions) * 100;
+    progressFill.style.width = `${percent}%`;
+}
+
+// Загрузка данных пагинации
+async function loadNavigationData() {
+    try {
+        const response = await fetch(`/api/olympiad/navigation/${olympiadId}/${participantId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            renderPagination(data.questions);
+            updateProgress(data.questions.filter(q => q.isAnswered).length);
+        }
+    } catch (error) {
+        console.error('Error loading navigation:', error);
+    }
+}
+
+// Рендер пагинации
+function renderPagination(questions) {
+    let html = '';
+    const maxVisible = 10;
+    const total = questions.length;
+    
+    if (total <= maxVisible) {
+        // Все вопросы
+        questions.forEach(q => {
+            const statusClass = q.isAnswered ? 'answered' : 'unanswered';
+            const currentClass = q.isCurrent ? 'current' : '';
+            html += `<div class="pagination-item ${statusClass} ${currentClass}" data-index="${q.index}" onclick="goToQuestion(${q.index})">
+                        ${q.number}
+                    </div>`;
+        });
+    } else {
+        // Сложная пагинация с ...
+        let start = Math.max(0, currentIndex - 4);
+        let end = Math.min(total, start + 9);
+        
+        if (end - start < 9) {
+            start = Math.max(0, end - 9);
+        }
+        
+        if (start > 0) {
+            html += `<div class="pagination-item" onclick="goToQuestion(0)">1</div>`;
+            if (start > 1) html += `<div class="pagination-item disabled">...</div>`;
+        }
+        
+        for (let i = start; i < end; i++) {
+            const q = questions[i];
+            const statusClass = q.isAnswered ? 'answered' : 'unanswered';
+            const currentClass = q.isCurrent ? 'current' : '';
+            html += `<div class="pagination-item ${statusClass} ${currentClass}" data-index="${q.index}" onclick="goToQuestion(${q.index})">
+                        ${q.number}
+                    </div>`;
+        }
+        
+        if (end < total) {
+            if (end < total - 1) html += `<div class="pagination-item disabled">...</div>`;
+            html += `<div class="pagination-item" onclick="goToQuestion(${total - 1})">${total}</div>`;
+        }
+    }
+    
+    paginationContainer.innerHTML = html;
+}
+
+// Переход к вопросу через пагинацию
+async function goToQuestion(index) {
+    if (index === currentIndex) return;
+    
+    showLoading();
+    const answers = getCurrentAnswers();
+    
+    try {
+        const response = await fetch('/api/olympiad/question', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                olympiadId: olympiadId,
+                participantId: participantId,
+                questionIndex: index,
+                currentQuestionIndex: currentIndex,
+                currentSelectedOptionIds: answers.selectedOptionIds,
+                currentManualAnswer: answers.manualAnswer
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            currentIndex = data.currentIndex;
+            renderQuestion(data.question);
+            updateNavigationButtons(data.hasPrevious, data.hasNext);
+            updateCounter(currentIndex + 1, totalQuestions);
+            await loadNavigationData();
+        } else {
+            alert(data.message);
+        }
+    } catch (error) {
+        console.error('Error navigating to question:', error);
+        alert('Ошибка при загрузке вопроса');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Навигация (Назад/Далее)
+async function navigate(direction) {
+    showLoading();
+    const answers = getCurrentAnswers();
+    
+    try {
+        const response = await fetch('/api/olympiad/navigate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                olympiadId: olympiadId,
+                participantId: participantId,
+                currentQuestionIndex: currentIndex,
+                direction: direction,
+                selectedOptionIds: answers.selectedOptionIds,
+                manualAnswer: answers.manualAnswer
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            currentIndex = data.newIndex;
+            renderQuestion(data.question);
+            updateNavigationButtons(data.hasPrevious, data.hasNext);
+            updateCounter(currentIndex + 1, totalQuestions);
+            await loadNavigationData();
+        } else {
+            alert(data.message);
+        }
+    } catch (error) {
+        console.error('Error navigating:', error);
+        alert('Ошибка при навигации');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Проверка перед завершением
+async function checkBeforeSubmit() {
+    showLoading();
+    const answers = getCurrentAnswers();
+    
+    try {
+        const response = await fetch('/api/olympiad/check-submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                olympiadId: olympiadId,
+                participantId: participantId,
+                currentQuestionIndex: currentIndex,
+                selectedOptionIds: answers.selectedOptionIds,
+                manualAnswer: answers.manualAnswer
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            if (data.canSubmit) {
+                if (confirm('Вы уверены, что хотите завершить олимпиаду?')) {
+                    // Отправляем форму на завершение
+                    document.getElementById('finalSubmitForm').submit();
                 }
+            } else {
+                alert(data.message);
+            }
+        }
+    } catch (error) {
+        console.error('Error checking submit:', error);
+    } finally {
+        hideLoading();
+    }
+}
 
-                // Собираем выбранные checkbox
-                var selectedCheckboxes = document.querySelectorAll('input[type="checkbox"]:checked');
-                selectedCheckboxes.forEach(cb => selectedIds.push(cb.value));
+// Рендер вопроса
+function renderQuestion(question) {
+    // Тип вопроса
+    const isAuto = question.type.startsWith('auto');
+    questionTypeBadge.className = `question-type-badge ${isAuto ? 'type-auto' : 'type-manual'}`;
+    questionTypeBadge.querySelector('i').className = `fas ${isAuto ? 'fa-check-circle' : 'fa-pen'} me-1`;
+    questionTypeText.textContent = isAuto ? 'Тестовое задание' : 'Развёрнутый ответ';
+    
+    questionNumber.innerHTML = `<i class="fas fa-question-circle me-2"></i>Вопрос ${question.number}`;
+    questionText.innerHTML = question.text;
+    
+    // Вопросу добавляем атрибут с типом для автосохранения
+    questionText.parentElement?.setAttribute('data-question-type', question.type);
+    
+    // Вложения
+    if (question.attachments && question.attachments.length > 0) {
+        let attachmentsHtml = '';
+        question.attachments.forEach(att => {
+            attachmentsHtml += `<img src="${att}" class="attachment-img" alt="Вложение к вопросу" />`;
+        });
+        attachmentsContainer.innerHTML = attachmentsHtml;
+        attachmentsContainer.style.display = 'block';
+    } else {
+        attachmentsContainer.innerHTML = '';
+        attachmentsContainer.style.display = 'none';
+    }
+    
+    // Ответы
+    if (question.type === 'auto-radio') {
+        let optionsHtml = '<div class="options-container">';
+        question.options.forEach(opt => {
+            optionsHtml += `
+                <div class="option">
+                    <input type="radio" 
+                           name="selectedOptions" 
+                           value="${opt.id}" 
+                           id="opt_${opt.id}"
+                           ${opt.isSelected ? 'checked' : ''}
+                           onchange="triggerAutoSave()">
+                    <label for="opt_${opt.id}">${opt.text}</label>
+                </div>
+            `;
+        });
+        optionsHtml += '</div>';
+        answerContainer.innerHTML = optionsHtml;
+    } 
+    else if (question.type === 'auto-checkbox') {
+        let optionsHtml = '<div class="options-container">';
+        question.options.forEach(opt => {
+            optionsHtml += `
+                <div class="option">
+                    <input type="checkbox" 
+                           name="selectedOptions" 
+                           value="${opt.id}" 
+                           id="opt_${opt.id}"
+                           ${opt.isSelected ? 'checked' : ''}
+                           onchange="triggerAutoSave()">
+                    <label for="opt_${opt.id}">${opt.text}</label>
+                </div>
+            `;
+        });
+        optionsHtml += '</div>';
+        answerContainer.innerHTML = optionsHtml;
+    }
+    else if (question.type === 'manual') {
+        answerContainer.innerHTML = `
+            <textarea data-manual-answer 
+                      class="manual-answer" 
+                      placeholder="Введите ваш ответ здесь..."
+                      oninput="triggerAutoSave()">${escapeHtml(question.manualAnswer || '')}</textarea>
+        `;
+    }
+    
+    // Обновляем атрибут типа на контейнере ответов
+    answerContainer.setAttribute('data-question-type', question.type);
+}
 
-                // Удаляем старые поля
-                var oldInputs = form.querySelectorAll('input[name="SelectedOptionIds"]');
-                oldInputs.forEach(input => input.remove());
+// Обновление кнопок навигации
+function updateNavigationButtons(hasPrevious, hasNext) {
+    prevButton.style.display = hasPrevious ? 'inline-flex' : 'none';
+    
+    if (hasNext) {
+        nextButton.style.display = 'inline-flex';
+        submitButton.style.display = 'none';
+    } else {
+        nextButton.style.display = 'none';
+        submitButton.style.display = 'inline-flex';
+    }
+}
 
-                // Добавляем новые поля (для radio это будет одно поле, для checkbox - несколько)
-                selectedIds.forEach(id => {
-                    var input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'SelectedOptionIds';
-                    input.value = id;
-                    form.appendChild(input);
-                });
-            });
-    </script>
+// Обновление счетчика и прогресс-бара
+function updateCounter(current, total) {
+    questionCounter.textContent = `Вопрос ${current} из ${total}`;
+}
+
+// Вспомогательная функция для экранирования HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Инициализация
+async function init() {
+    await loadNavigationData();
+    
+    // Загружаем текущий вопрос из модели (или через API)
+    const initialQuestion = {
+    id: @Model.CurrentQuestion.QuestionId,
+    number: @Model.CurrentQuestion.OrderNumber,
+    text: @Html.Raw(Json.Serialize(Model.CurrentQuestion.Description)),
+    type: "@Model.CurrentQuestion.Type",
+    attachments: @Html.Raw(Json.Serialize(Model.CurrentQuestion.Attachments)),
+    options: @Html.Raw(Json.Serialize(Model.CurrentQuestion.Options.Select(o => new { id = o.OptionId, text = o.OptionText, isSelected = o.IsSelected }))),
+    selectedOptionIds: @Html.Raw(Json.Serialize(Model.CurrentQuestion.SelectedOptionIds ?? new List<int>())),
+    manualAnswer: @Html.Raw(Json.Serialize(Model.CurrentQuestion.ManualAnswer ?? ""))
+    };
+    
+    renderQuestion(initialQuestion);
+    updateNavigationButtons(currentIndex > 0, currentIndex + 1 < totalQuestions);
+    updateCounter(currentIndex + 1, totalQuestions);
+    
+    // Назначаем обработчики кнопок
+    prevButton.onclick = () => navigate('previous');
+    nextButton.onclick = () => navigate('next');
+    submitButton.onclick = () => checkBeforeSubmit();
+}
+
+// Запуск при загрузке страницы
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+<!-- Скрытая форма для финальной отправки -->
+<form id="finalSubmitForm" asp-action="SubmitOlympiad" asp-controller="Olympiad" method="post" style="display:none;">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" value="@Model.OlympiadId" />
+</form>
 
 </body>
 </html>

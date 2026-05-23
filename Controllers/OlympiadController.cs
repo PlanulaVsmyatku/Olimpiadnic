@@ -241,16 +241,6 @@ namespace Olimpiadnic.Controllers
             if (existingSession != null)
             {
                 participation = existingSession;
-
-                /*
-                // Получаем текущий вопрос с сохраненными ответами
-                var currentQuestion = _sessionService.GetCurrentQuestion(participation);
-                if (currentQuestion != null)
-                {
-                    // Обновляем текущий вопрос в модели
-                    participation.Questions[participation.CurrentQuestionIndex] = currentQuestion;
-                }
-                */
                 _logger.LogInformation($"Восстановлена сессия. Текущий вопрос: {participation.CurrentQuestionIndex + 1}, Ответов сохранено: {CountAnsweredQuestions(participation)}");
             }
             else
@@ -272,6 +262,29 @@ namespace Olimpiadnic.Controllers
             );
         }
 
+        // На случай если JS отключён
+        [HttpGet]
+        public async Task<IActionResult> GetQuestionPartial(int id, int questionIndex)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var participant = await _olympiadRepository.GetOrCreateParticipantAsync(id, int.Parse(userIdClaim));
+            var session = _sessionService.GetSession(id, participant.ParticipantId);
+
+            if (session == null)
+            {
+                return NotFound();
+            }
+
+            if (questionIndex >= 0 && questionIndex < session.TotalQuestions)
+            {
+                _sessionService.UpdateCurrentQuestionIndex(session, questionIndex);
+                session = _sessionService.GetSession(id, participant.ParticipantId);
+            }
+
+            return PartialView("_QuestionPartial", session!.CurrentQuestion);
+        }
+
+        /* API методы уже занимаются сохранением состояния вопроса
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
@@ -357,6 +370,7 @@ namespace Olimpiadnic.Controllers
                 return RedirectToAction("Participate", new { id = model.OlympiadId });
             }
         }
+        */
 
         // Вспомогательный метод для проверки отвеченности вопроса
         private bool IsQuestionUnanswered(QuestionParticipationViewModel question)
