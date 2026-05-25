@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Olimpiadnic.Data;
@@ -55,6 +56,7 @@ namespace Olimpiadnic.Controllers
             var isCompleted = false;
             DateTime? completedAt = null;
             int? userTotalScore = null;
+            var MaxScore = new ParticipantResultsViewModel();
 
             // Проверяем, авторизован ли пользователь
             if (User.Identity?.IsAuthenticated == true)
@@ -74,10 +76,13 @@ namespace Olimpiadnic.Controllers
                     if (isCompleted)
                     {
                         var result = await _olympiadRepository.GetParticipantResultAsync(participant.ParticipantId);
+                        MaxScore = await _olympiadRepository.GetParticipantResultsForDisplayAsync(participant.ParticipantId);
                         userTotalScore = result?.TotalScore;
                     }
                 }
             }
+
+            
 
             // Определяем статус олимпиады
             var now = DateTime.Now;
@@ -103,6 +108,7 @@ namespace Olimpiadnic.Controllers
                 RegistOpen = olympiad.RegistOpen,
                 RegistClosed = olympiad.RegistClosed,
                 TotalQuestions = totalQuestions,
+                MaxPossibleScore = MaxScore.MaxPossibleScore,
                 IsRegistered = isRegistered,
                 CanParticipate = isRegistered && now >= olympiad.EventStart && now <= olympiad.EventEnd,
                 IsCompleted = isCompleted,

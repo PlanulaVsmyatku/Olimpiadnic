@@ -84,11 +84,13 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<AutoQuestionsSnapshot>(entity =>
         {
-            entity.HasKey(e => e.QuestOptionId).HasName("PK__Auto_que__E4334DC7DE5D2A70");
+            entity.HasKey(e => e.QuestOptionId);
 
             entity.ToTable("Auto_questions_snapshot");
 
-            entity.Property(e => e.QuestOptionId).HasColumnName("quest_option_ID");
+            entity.Property(e => e.QuestOptionId)
+                .ValueGeneratedNever()
+                .HasColumnName("quest_option_ID");
             entity.Property(e => e.IsCorrect).HasColumnName("is_correct");
             entity.Property(e => e.OptionText)
                 .HasMaxLength(500)
@@ -164,11 +166,13 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<ManualQuestionsConfigSnapshot>(entity =>
         {
-            entity.HasKey(e => e.QuestManualConfigId).HasName("PK__Manual_q__693CE923A2C166A1");
+            entity.HasKey(e => e.QuestManualConfigId);
 
             entity.ToTable("Manual_questions_config_snapshot");
 
-            entity.Property(e => e.QuestManualConfigId).HasColumnName("quest_manual_config_ID");
+            entity.Property(e => e.QuestManualConfigId)
+                .ValueGeneratedNever()
+                .HasColumnName("quest_manual_config_ID");
             entity.Property(e => e.MaxScore).HasColumnName("max_score");
             entity.Property(e => e.ModelAnswer)
                 .HasMaxLength(1500)
@@ -393,12 +397,12 @@ public partial class AppDbContext : DbContext
                 .HasColumnType("text")
                 .HasColumnName("description");
             entity.Property(e => e.IsActual)
-                .HasDefaultValue(true, "DF__Questions__is_ac__693CA210")
+                .HasDefaultValue(true)
                 .HasColumnName("is_actual");
             entity.Property(e => e.OlympId).HasColumnName("olymp_ID");
             entity.Property(e => e.QuestionOrder).HasColumnName("question_order");
             entity.Property(e => e.Type)
-                .HasMaxLength(13)
+                .HasMaxLength(10)
                 .IsUnicode(false)
                 .HasColumnName("type");
 
@@ -430,11 +434,13 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<QuestionAttachmentsSnapshot>(entity =>
         {
-            entity.HasKey(e => e.AttachSnapId).HasName("PK__Question__8C21C1724ACF9623");
+            entity.HasKey(e => e.AttachSnapId);
 
             entity.ToTable("Question_attachments_snapshot");
 
-            entity.Property(e => e.AttachSnapId).HasColumnName("attach_snap_ID");
+            entity.Property(e => e.AttachSnapId)
+                .ValueGeneratedNever()
+                .HasColumnName("attach_snap_ID");
             entity.Property(e => e.ImageUrl)
                 .HasMaxLength(500)
                 .IsUnicode(false)
@@ -445,7 +451,7 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.QuestSnapshot).WithMany(p => p.QuestionAttachmentsSnapshots)
                 .HasForeignKey(d => d.QuestSnapshotId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Question___quest__09746778");
+                .HasConstraintName("FK_Question_attachments_snapshot_Questions_snapshot");
         });
 
         modelBuilder.Entity<QuestionsSnapshot>(entity =>

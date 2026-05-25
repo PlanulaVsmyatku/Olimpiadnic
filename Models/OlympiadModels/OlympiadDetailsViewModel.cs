@@ -13,8 +13,10 @@
         public DateTime RegistOpen { get; set; }
         public DateTime RegistClosed { get; set; }
         public int TotalQuestions { get; set; }
+        public int MaxPossibleScore { get; set; }
         public bool IsRegistered { get; set; }
         public bool CanParticipate { get; set; }
+        public int? Percentage => MaxPossibleScore > 0 ? (UserTotalScore * 100 / MaxPossibleScore) : 0;
 
         public bool IsCompleted { get; set; }           // Завершена ли олимпиада пользователем
         public DateTime? CompletedAt { get; set; }      // Дата завершения

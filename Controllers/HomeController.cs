@@ -51,7 +51,7 @@ namespace Olimpiadnic.Controllers
                 PageSize = pagedResult.PageSize
             };
 
-            // Проверяем, записан ли пользователь на олимпиады
+            // Проверяем, записан ли пользователь на олимпиады и завершил ли он их
             if (User.Identity.IsAuthenticated && viewModel.Olympiads.Any())
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -65,6 +65,8 @@ namespace Olimpiadnic.Controllers
                     {
                         olympiad.IsUserRegistered = registeredParticipations
                             .Any(p => p.OlympId == olympiad.OlympiadId);
+                        olympiad.IsCompleted = registeredParticipations
+                            .Any(p => p.Status == "completed");
                     }
                 }
             }

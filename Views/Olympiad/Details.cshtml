@@ -77,14 +77,9 @@
                                     </span>
                                     <div class="score-preview">
                                         <div class="score-label">Набранные баллы</div>
-                                        <div class="score-value">@(Model.UserTotalScore ?? 0) / @Model.TotalQuestions</div>
+                                        <div class="score-value">@(Model.UserTotalScore ?? 0) / @Model.MaxPossibleScore</div>
                                         <div class="score-label mt-1">
-                                            @{
-                                                var percentage = Model.TotalQuestions > 0
-                                                    ? ((Model.UserTotalScore ?? 0) * 100 / Model.TotalQuestions)
-                                                    : 0;
-                                            }
-                                            @percentage% выполнения
+                                            @Model.Percentage% баллов
                                         </div>
                                         @if (Model.CompletedAt.HasValue)
                                         {

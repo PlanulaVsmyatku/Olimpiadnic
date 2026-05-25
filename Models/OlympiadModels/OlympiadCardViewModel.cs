@@ -39,6 +39,8 @@ namespace Olimpiadnic.Models.OlympiadModels
 
         [Display(Name = "Пользователь уже записан")]
         public bool IsUserRegistered { get; set; } = false;
+
+        public bool IsCompleted { get; set; } // завершил ли пользователь эту олимпиаду
     }
 
 }

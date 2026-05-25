@@ -132,7 +132,8 @@ namespace Olimpiadnic.Services.Repos
                 RegistOpen = o.RegistOpen,
                 RegistClosed = o.RegistClosed,
                 Status = GetStatusForOlympiadStatic(o.EventStart, o.EventEnd, o.RegistOpen, o.RegistClosed),
-                IsUserRegistered = false
+                IsUserRegistered = false,
+                IsCompleted = false,
             }).ToList();
 
             return new OlympiadPagedResult
@@ -489,10 +490,17 @@ namespace Olimpiadnic.Services.Repos
 
             if (result == null) return null;
 
+            // Получаем название из снимка олимпиады через первый SubmissionItem
+            var olympiadTitle = result.SubmissionItems
+                .FirstOrDefault()?
+                .QuestSnapshot?
+                .OlympSnap?
+                .Title ?? "Название не найдено";
+
             var viewModel = new ParticipantResultsViewModel
             {
                 OlympiadId = result.Participant.OlympId,
-                OlympiadTitle = result.Participant.Olymp?.Title ?? "Олимпиада",
+                OlympiadTitle = olympiadTitle,  // Используем название из снимка
                 ParticipantName = result.Participant.User?.UserProfile?.FullName ?? result.Participant.User?.Login ?? "Участник",
                 TotalScore = result.TotalScore ?? 0,
                 MaxPossibleScore = await CalculateTotalMaxScoreForParticipantAsync(result.ParticipantId),
@@ -790,7 +798,6 @@ namespace Olimpiadnic.Services.Repos
                 IsCheckbox = isCheckbox
             };
 
-            //промашка - а что если 3 варианта в чекбоксе а правильный только один?
             if (!isCheckbox)
             {
                 // Radio: простой режим
@@ -823,7 +830,6 @@ namespace Olimpiadnic.Services.Repos
         /// <summary>
         /// Получение максимального балла для вопроса по снапшоту
         /// </summary>
-        // Вспомогательный метод для получения максимального балла вопроса
         private async Task<int> GetMaxScoreForQuestionSnapshotAsync(int questionSnapshotId)
         {
             // Для auto-вопросов всегда 1
@@ -839,13 +845,6 @@ namespace Olimpiadnic.Services.Repos
 
             return manualConfig?.MaxScore ?? 0;
         }
-
-        private int GetMaxScoreForQuestion(int questionSnapshotId)
-        {
-            // Этот метод синхронный, используем асинхронную версию выше
-            return 1;
-        }
-
 
         /// <summary>
         /// Пересчёт общего балла участника (сумма всех auto-баллов + проверенных manual)
