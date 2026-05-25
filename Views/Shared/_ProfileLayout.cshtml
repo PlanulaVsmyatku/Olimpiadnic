@@ -1,0 +1,110 @@
+@using System.Security.Claims
+@{
+    Layout = "_BaseLayout";
+    var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+    bool isParticipant = role == "participant";
+    bool isStaff = role == "staff";
+    bool isAdmin = role == "admin";
+
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+}
+
+<!-- Добавляем специфичные для профиля стили -->
+@section Styles {
+    <link rel="stylesheet" href="~/css/ProfileStyles.css" />
+    @await RenderSectionAsync("AdditionalStyles", required: false)
+}
+
+<!-- Оборачиваем контент в структуру с сайдбаром -->
+<div class="dashboard-container">
+    <!-- Вертикальная навигация -->
+    <aside class="dashboard-sidebar">
+        <nav class="nav flex-column">
+            <a class="nav-link @(currentAction == "Profile" ? "active" : "")"
+               href="/Profile/Profile">
+                <i class="fas fa-user-circle"></i> Профиль
+            </a>
+
+            @if (isParticipant)
+            {
+                <a class="nav-link @(currentAction == "MyOlympiads" ? "active" : "")"
+                   href="/Profile/MyOlympiads">
+                    <i class="fas fa-trophy"></i> Мои олимпиады
+                </a>
+            }
+            else if (isStaff)
+            {
+                <a class="nav-link @(currentAction == "MyOlympiads" ? "active" : "")"
+                   href="/Profile/MyOlympiads">
+                    <i class="fas fa-trophy"></i> Мои олимпиады
+                </a>
+                <a class="nav-link @(currentAction == "Create" ? "active" : "")"
+                   href="/CreateOlympiad/Create">
+                    <i class="fas fa-plus-circle"></i> Создать олимпиаду
+                </a>
+                <a class="nav-link @(currentAction == "ManualChecks" ? "active" : "")"
+                   href="/Olympiad/ManualChecks">
+                    <i class="fas fa-clipboard-list"></i> Проверка ответов
+                </a>
+            }
+            else if (isAdmin)
+            {
+                <a class="nav-link @(currentAction == "CreateInvite" ? "active" : "")"
+                   href="/AdminBoard/CreateInvite">
+                    <i class="fas fa-list-alt"></i> Создать инвайт-ссылку
+                </a>
+                <a class="nav-link @(currentAction == "Statistics" ? "active" : "")"
+                   href="/AdminBoard/Statistics">
+                    <i class="fas fa-chart-line"></i> Статистика
+                </a>
+                <a class="nav-link @(currentAction == "AllUsers" ? "active" : "")"
+                   href="/AdminBoard/AllUsers">
+                    <i class="fas fa-users"></i> Профили пользователей
+                </a>
+            }
+        </nav>
+    </aside>
+
+    <!-- Основной контент -->
+    <main class="dashboard-content">
+        @RenderBody()
+    </main>
+</div>
+
+<!-- Добавляем специфичные для профиля скрипты -->
+@section Scripts {
+    <script>
+        // Функция для подсветки активной ссылки
+        function highlightActiveLink() {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.dashboard-sidebar .nav-link');
+
+            let hasActive = false;
+
+            navLinks.forEach(link => {
+                const linkPath = link.getAttribute('href');
+
+                // Точное совпадение или начинается с пути (для вложенных страниц)
+                if (linkPath && (currentPath === linkPath ||
+                    (linkPath !== '/' && currentPath.startsWith(linkPath)))) {
+
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                    hasActive = true;
+                }
+            });
+
+            // Если ничего не найдено, подсветить "Профиль" как fallback
+            if (!hasActive && currentPath.includes('/Profile')) {
+                const profileLink = document.querySelector('.dashboard-sidebar .nav-link[href="/Profile/Profile"]');
+                if (profileLink) profileLink.classList.add('active');
+            }
+        }
+
+        // Выполнить при загрузке
+        document.addEventListener('DOMContentLoaded', highlightActiveLink);
+    </script>
+
+    @await RenderSectionAsync("ProfileScripts", required: false)
+}

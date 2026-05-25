@@ -2,6 +2,7 @@
 @model UserProfileViewModel
 
 @{
+    Layout = "_ProfileLayout";
     ViewData["Title"] = "Личный кабинет";
     var role = ViewBag.UserRole as string ?? "Роль?";
 
@@ -12,99 +13,31 @@
 
 }
 
-<!DOCTYPE html>
-<html>
-<head>
-    <link rel="stylesheet" href="~/css/ProfileStyles.css" />
-</head>
-<body>
-
-<div class="dashboard-container">
-    <!-- Вертикальная навигация (без изменений) -->
-    <aside class="dashboard-sidebar">
-        <nav class="nav flex-column">
-            <a class="nav-link active" id="profile-tab" href="/Profile/Profile">
-                <i class="fas fa-user-circle"></i> Профиль
-            </a>
-            
-            @if (isParticipant)
-            {
-                var participantModel = Model as ParticipantProfileViewModel;
-                <a class="nav-link" id="my-olympiads-tab" href="/Olympiad/MyOlympiads">
-                    <i class="fas fa-trophy"></i> Мои олимпиады
-                </a>
-                <a class="nav-link" id="completed-tab" href="/Olympiad/CompletedOlympiads">
-                    <i class="fas fa-check-circle"></i> Пройденные олимпиады
-                </a>
-                <div class="mt-3 px-3">
-                        <div class="status-badge @(participantModel.IsActive ? "status-active" : "status-inactive")">
-                            <i class="fas @(participantModel.IsActive ? "fa-check-circle" : "fa-clock") me-1"></i>
-                            Статус: @(participantModel.IsActive ? "Активирован" : "Ожидает активации")
-                    </div>
-                </div>
-            }
+    <!-- Основной контент -->
+    <div id="profile-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2 class="mb-0">
+                <i class="fas fa-user-circle me-2"></i>Профиль пользователя
+                @if (isAdmin)
+                {
+                    <span class="badge bg-danger ms-2">Администратор</span>
+                }
                 else if (isStaff)
                 {
-                    <a class="nav-link" id="my-olympiads-tab" href="/Olympiad/MyOlympiads">
-                        <i class="fas fa-list-alt"></i> Мои олимпиады
-                    </a>
-                    <a class="nav-link" id="create-olympiad-tab" href="/CreateOlympiad/Create">
-                        <i class="fas fa-plus-circle"></i> Создать олимпиаду
-                    </a>
+                    <span class="badge bg-primary ms-2">Сотрудник</span>
                 }
-                else if (isAdmin)
+                else
                 {
-                    <!--
-                <a class="nav-link" id="my-olympiads-tab" href="/Olympiad/MyOlympiads">
-                    <i class="fas fa-list-alt"></i> Мои олимпиады
-                </a>
-                <a class="nav-link" id="create-olympiad-tab" href="/CreateOlympiad/Create">
-                    <i class="fas fa-plus-circle"></i> Создать олимпиаду
-                </a>
-                -->
-                    <a class="nav-link" id="my-olympiads-tab" href="/AdminBoard/CreateInvite">
-                        <i class="fas fa-list-alt"></i> Создать инвайт-ссылку
-                    </a>
-                    <a class="nav-link" id="statistics-tab" href="/AdminBoard/Statistics">
-                        <i class="fas fa-chart-line"></i> Статистика
-                    </a>
-                    <a class="nav-link" id="all-users-tab" href="/AdminBoard/AllUsers">
-                        <i class="fas fa-users"></i> Профили пользователей
-                    </a>
-                    <a class="nav-link" id="all-olympiads-tab" href="/AdminBoard/AllOlympiads">
-                        <i class="fas fa-globe"></i> Все олимпиады
-                    </a>
+                    <span class="badge bg-secondary ms-2">Участник</span>
                 }
-        </nav>
-    </aside>
+            </h2>
 
-    <!-- Основной контент -->
-    <main class="dashboard-content" id="dashboardContent">
-        <div id="profile-content">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                <h2 class="mb-0">
-                    <i class="fas fa-user-circle me-2"></i>Профиль пользователя
-                        @if (isAdmin)
-                        {
-                            <span class="badge bg-danger ms-2">Администратор</span>
-                        }
-                        else if (isStaff)
-                        {
-                            <span class="badge bg-primary ms-2">Сотрудник</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-secondary ms-2">Участник</span>
-                        }
-                </h2>
-                
-                <!-- Кнопки действий -->
-                <div id="action-buttons">
-                    <button id="editButton" class="btn-edit" onclick="enableEditMode()">
-                        <i class="fas fa-edit"></i> Редактировать
-                    </button>
-                </div>
+            <div id="action-buttons">
+                <button id="editButton" class="btn-edit" onclick="enableEditMode()">
+                    <i class="fas fa-edit"></i> Редактировать
+                </button>
             </div>
+        </div>
             
             <!-- Форма профиля -->
             <form id="profileForm" method="post" action="@Url.Action("UpdateProfile", "Profile")">
@@ -328,130 +261,135 @@
                 </div>
             </form>
         </div>
-    </main>
-</div>
 
-<!-- Spinner -->
+
+<!-- Спиннер :D -->
 <div class="spinner" id="spinner">
     <div class="spinner-border text-primary" role="status">
         <span class="visually-hidden">Загрузка...</span>
     </div>
 </div>
 
-<script>
-    function enableEditMode() {
-        document.getElementById('viewMode').style.display = 'none';
-        document.getElementById('editMode').style.display = 'block';
-        document.getElementById('editButton').style.display = 'none';
+@section ProfileScripts {
+    <script>
+        function enableEditMode() {
+            document.getElementById('viewMode').style.display = 'none';
+            document.getElementById('editMode').style.display = 'block';
+            document.getElementById('editButton').style.display = 'none';
         
-        // Добавляем класс редактирования к контейнеру
-        document.getElementById('profile-content').classList.add('edit-mode');
-    }
-    
-    function cancelEdit() {
-        document.getElementById('viewMode').style.display = 'block';
-        document.getElementById('editMode').style.display = 'none';
-        document.getElementById('editButton').style.display = 'inline-block';
-        
-        document.getElementById('profile-content').classList.remove('edit-mode');
-        
-        // Перезагружаем данные из формы (отменяем изменения)
-        location.reload();
-    }
-    
-    async function saveProfile() {
-        const form = document.getElementById('profileForm');
-        const formData = new FormData(form);
-        
-        showSpinner();
-        
-        try {
-            const response = await fetch('@Url.Action("UpdateProfile", "Profile")', {
-                method: 'POST',
-                headers: {
-                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                },
-                body: formData
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                showToast('Профиль успешно обновлен!', 'success');
-                setTimeout(() => {
-                    location.reload();
-                }, 1500);
-            } else {
-                showToast(result.message || 'Ошибка при обновлении профиля', 'error');
-                cancelEdit();
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            showToast('Произошла ошибка при сохранении', 'error');
-        } finally {
-            hideSpinner();
+            // Добавляем класс редактирования к контейнеру
+            document.getElementById('profile-content').classList.add('edit-mode');
         }
-    }
     
-    async function resetPassword() {
-        const email = '@Model.Email';
+        function cancelEdit() {
+            document.getElementById('viewMode').style.display = 'block';
+            document.getElementById('editMode').style.display = 'none';
+            document.getElementById('editButton').style.display = 'inline-block';
         
-        if (confirm('Вы уверены, что хотите сбросить пароль? Ссылка для восстановления будет отправлена на ваш email.')) {
+            document.getElementById('profile-content').classList.remove('edit-mode');
+        
+            // Перезагружаем данные из формы (отменяем изменения)
+            location.reload();
+        }
+    
+        async function saveProfile() {
+            const form = document.getElementById('profileForm');
+            const formData = new FormData(form);
+        
             showSpinner();
-            
+        
             try {
-                const response = await fetch('@Url.Action("SendResetLink", "PasswordRecovery")', {
+                const response = await fetch('@Url.Action("UpdateProfile", "Profile")', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
                         'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
                     },
-                    body: JSON.stringify({ email: email })
+                    body: formData
                 });
-                
+            
                 const result = await response.json();
-                
+            
                 if (result.success) {
-                    showToast('Ссылка для сброса пароля отправлена на ваш email', 'success');
+                    showToast('Профиль успешно обновлен!', 'success');
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
                 } else {
-                    showToast(result.message || 'Ошибка при отправке ссылки', 'error');
+                    showToast(result.message || 'Ошибка при обновлении профиля', 'error');
+                    cancelEdit();
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showToast('Произошла ошибка при отправке запроса', 'error');
+                showToast('Произошла ошибка при сохранении', 'error');
             } finally {
                 hideSpinner();
             }
         }
-    }
     
-    function showSpinner() {
-        document.getElementById('spinner').style.display = 'block';
-    }
-    
-    function hideSpinner() {
-        document.getElementById('spinner').style.display = 'none';
-    }
-    
-    function showToast(message, type) {
-        const toast = document.createElement('div');
-        toast.className = `toast-notification toast-${type}`;
-        toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>${message}`;
-        document.body.appendChild(toast);
+        async function resetPassword() {
+            const email = '@Model.Email';
         
-        setTimeout(() => {
-            toast.remove();
-        }, 3000);
-    }
-    
-    // Активная ссылка в вертикальном меню
-    document.querySelectorAll('.dashboard-sidebar .nav-link').forEach(link => {
-        if (window.location.pathname.includes(link.getAttribute('href'))) {
-            document.querySelectorAll('.dashboard-sidebar .nav-link').forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
+            if (confirm('Вы уверены, что хотите сбросить пароль? Ссылка для восстановления будет отправлена на ваш email.')) {
+                showSpinner();
+            
+                try {
+                    const response = await fetch('@Url.Action("SendResetLink", "PasswordRecovery")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                        },
+                        body: JSON.stringify({ email: email })
+                    });
+                
+                    const result = await response.json();
+                
+                    if (result.success) {
+                        showToast('Ссылка для сброса пароля отправлена на ваш email', 'success');
+                    } else {
+                        showToast(result.message || 'Ошибка при отправке ссылки', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('Произошла ошибка при отправке запроса', 'error');
+                } finally {
+                    hideSpinner();
+                }
+            }
         }
-    });
-</script>
+    
+        function showSpinner() {
+            document.getElementById('spinner').style.display = 'block';
+        }
+    
+        function hideSpinner() {
+            document.getElementById('spinner').style.display = 'none';
+        }
+    
+        function showToast(message, type) {
+            const container = document.getElementById('global-toast-container');
+            if (!container) {
+                // Fallback, если контейнера нет
+                console.error('Toast container not found');
+                return;
+            }
+    
+            const toast = document.createElement('div');
+            toast.className = `toast-notification toast-${type}`;
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-2"></i>${message}`;
+    
+            // Добавляем в контейнер
+            container.appendChild(toast);
+    
+            // Удаляем через 3 секунды с анимацией
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s ease-out forwards';
+                setTimeout(() => {
+                    if (toast.parentNode) toast.remove();
+                }, 300);
+            }, 3000);
+        }
+    
+    </script>
+}
 
-</body>
-</html>

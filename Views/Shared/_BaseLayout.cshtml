@@ -1,0 +1,173 @@
+@using System.Security.Claims
+@{
+    var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+    bool isParticipant = role == "participant";
+    bool isStaff = role == "staff";
+    bool isAdmin = role == "admin";
+
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="~/images/Favicon.ico" type="image/x-icon" />
+    <title>@ViewData["Title"] - Олимпиадник</title>
+    
+    <!-- Общие CSS для всего сайта -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/Olimpiadnic.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="background-fixed">
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow fixed-top">
+            <div class="container-fluid">
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                    <img src="~/images/MainIcon.svg" alt="Лого" class="brand-icon" style="height: 30px;">
+                    Олимпиадник
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="Home" asp-action="Index">
+                                <i class="fas fa-home me-1"></i>Главная
+                            </a>
+                        </li>
+
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            @if (!isAdmin)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="Olympiad" asp-action="MyOlympiads">
+                                        <i class="fas fa-trophy me-1"></i>Мои олимпиады
+                                    </a>
+                                </li>
+                            }
+
+                                
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-controller="Profile" asp-action="Profile">
+                                    <i class="fas fa-user-circle me-1"></i>Личный кабинет
+                                </a>
+                            </li>
+
+                            @if (User.Identity.IsAuthenticated)
+                            {
+                                <!-- Временная отладка -->
+                                <div class="alert alert-info small position-fixed bottom-0 end-0 m-3" style="z-index: 9999; opacity: 0.8;">
+                                    <strong>Debug:</strong><br>
+                                    Role: @(User.FindFirst(ClaimTypes.Role)?.Value ?? "не найдена")<br>
+                                    Name: @User.Identity.Name
+                                </div>
+                            }
+
+                            @if (isStaff)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="Olympiad" asp-action="Create">
+                                        <i class="fas fa-plus-circle me-1"></i>Создать олимпиаду
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="Olympiad" asp-action="ManualChecks">
+                                        <i class="fas fa-clipboard-list me-1"></i>Проверка ответов
+                                    </a>
+                                </li>
+                            }
+
+                            @if (isAdmin)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="AdminBoard" asp-action="Statistics">
+                                        <i class="fas fa-chart-line me-1"></i>Статистика
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="AdminBoard" asp-action="AllUsers">
+                                        <i class="fas fa-users me-1"></i>Профили пользователей
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-controller="AdminBoard" asp-action="CreateInvite">
+                                        <i class="fas fa-users me-1"></i>Создать инвайт-ссылку
+                                    </a>
+                                </li>
+                            }
+                        }
+                    </ul>
+
+                    <div class="d-flex">
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    👤 @(User.FindFirst("FullName")?.Value ?? User.Identity.Name)
+                                    @if (isAdmin)
+                                    {
+                                        <span class="badge bg-danger ms-1">Администратор</span>
+                                    }
+                                    else if (isStaff)
+                                    {
+                                        <span class="badge bg-primary ms-1">Сотрудник</span>
+                                    }
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" asp-controller="Profile" asp-action="Profile">
+                                            <i class="fas fa-id-card me-2"></i>Профиль
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" asp-controller="Account" asp-action="Logout">
+                                            <i class="fas fa-sign-out-alt me-2"></i>Выйти
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        }
+                        else
+                        {
+                            <a class="btn btn-outline-primary me-2" asp-controller="Account" asp-action="Login">Вход</a>
+                            <a class="btn btn-primary" asp-controller="Account" asp-action="Register">Регистрация</a>
+                        }
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main style="flex: 1 0 auto; margin-top: 76px; margin-bottom: 76px;">
+        <div class="container-fluid px-4 content-wrapper pb-5">
+            @RenderBody()
+        </div>
+    </main>
+
+    <footer class="border-top footer text-muted bg-transparent mt-5" style="flex-shrink: 0; margin-top: auto;">
+        <div class="container py-3 text-light">
+            &copy; 2026 - Олимпиадник - <a asp-controller="Home" asp-action="Privacy">Политика конфиденциальности</a>
+        </div>
+    </footer>
+
+    <!-- Общие скрипты для всего сайта -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    
+    @await RenderSectionAsync("Scripts", required: false)
+    <div id="global-toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 999999; display: flex; flex-direction: column; gap: 10px;"></div>
+</body>
+</html>

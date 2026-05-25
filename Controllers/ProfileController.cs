@@ -45,7 +45,7 @@ namespace Olimpiadnic.Controllers
         // POST: /Profile/UpdateProfile
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateProfile([FromForm] UserProfileViewModel model)
+        public async Task<IActionResult> UpdateProfile([FromForm] IFormCollection form)
         {
             try
             {
@@ -62,36 +62,28 @@ namespace Olimpiadnic.Controllers
                 }
 
                 // Обновляем общие поля
-                userProfile.FullName = model.FullName;
-                userProfile.Email = model.Email;
+                userProfile.FullName = form["FullName"].ToString();
+                userProfile.Email = form["Email"].ToString();
 
                 // Обновляем поля в зависимости от роли
                 switch (role)
                 {
                     case "participant":
-                        var participantModel = model as ParticipantProfileViewModel;
-                        if (participantModel != null)
-                        {
-                            userProfile.City = participantModel.City;
-                            userProfile.PositionGrade = participantModel.EducationLevel;
-                            userProfile.Kurator = participantModel.Curator;
-                            userProfile.Organisation = participantModel.EducationalInstitution;
-                        }
+                        userProfile.City = form["City"].ToString();
+                        userProfile.PositionGrade = form["EducationLevel"].ToString();
+                        userProfile.Kurator = form["Curator"].ToString();
+                        userProfile.Organisation = form["EducationalInstitution"].ToString();
                         break;
 
                     case "staff":
-                        var staffModel = model as StaffProfileViewModel;
-                        if (staffModel != null)
-                        {
-                            userProfile.Phone = staffModel.PhoneNumber;
-                            userProfile.City = staffModel.City;
-                            userProfile.PositionGrade = staffModel.Departament;
-                            userProfile.Organisation = staffModel.EducationalInstitution;
-                        }
+                        userProfile.Phone = form["PhoneNumber"].ToString();
+                        userProfile.City = form["City"].ToString();
+                        userProfile.PositionGrade = form["Departament"].ToString();
+                        userProfile.Organisation = form["EducationalInstitution"].ToString();
                         break;
 
                     case "admin":
-                        // Админ не имеет дополнительных полей для обновления
+                        // Админ не имеет дополнительных полей
                         break;
                 }
 
@@ -273,6 +265,13 @@ namespace Olimpiadnic.Controllers
                 _ => "Роль?"
             };
         }
+        #endregion
+
+        #region Мои олимпиады 
+
+
+
+
         #endregion
     }
 }
