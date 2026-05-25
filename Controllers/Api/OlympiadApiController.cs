@@ -60,6 +60,7 @@ namespace Olimpiadnic.Controllers.Api
         /// </summary>
         private void SaveAnswerToSession(OlympiadParticipationViewModel session, SaveAnswerRequest request)
         {
+            //существует ли сессия и находится ли индекс вопроса в границах
             if (session == null || request.CurrentQuestionIndex < 0 || request.CurrentQuestionIndex >= session.Questions.Count)
                 return;
 
@@ -343,6 +344,106 @@ namespace Olimpiadnic.Controllers.Api
                 message = "Все вопросы отвечены. Вы можете завершить олимпиаду."
             });
         }
+
+        #region Завершение олимпиады
+
+        /// <summary>
+        /// Финальное завершение олимпиады с пересчётом баллов
+        /// </summary>
+        [HttpPost("finalize")]
+        public async Task<IActionResult> FinalizeOlympiad([FromBody] FinalizeRequest request)
+        {
+            var validation = await GetValidSessionAsync(request.OlympiadId, request.ParticipantId);
+            if (!validation.success)
+            {
+                return BadRequest(new { success = false, message = validation.error });
+            }
+
+            var session = validation.session!;
+
+            // Сохраняем последний ответ, если есть
+            if (request.CurrentQuestionIndex >= 0 && request.CurrentQuestionIndex < session.Questions.Count)
+            {
+                SaveAnswerToSession(session, new SaveAnswerRequest
+                {
+                    CurrentQuestionIndex = request.CurrentQuestionIndex,
+                    SelectedOptionIds = request.SelectedOptionIds,
+                    ManualAnswer = request.ManualAnswer
+                });
+
+                // Также сохраняем в БД все ответы из сессии
+                await SaveAllSessionAnswersToDatabase(session);
+            }
+
+            // Завершаем олимпиаду в БД
+            var finalizeResult = await _olympiadRepository.FinalizeOlympiadAsync(request.ParticipantId);
+
+            if (!finalizeResult.Success)
+            {
+                return BadRequest(new { success = false, message = finalizeResult.ErrorMessage });
+            }
+
+            // Удаляем сессию
+            _sessionService.DeleteSession(session);
+
+            _logger.LogInformation($"Олимпиада {request.OlympiadId} завершена для участника {request.ParticipantId}. Результат: {finalizeResult.TotalScore}");
+
+            return Ok(new
+            {
+                success = true,
+                totalScore = finalizeResult.TotalScore,
+                autoScore = finalizeResult.AutoScore,
+                manualPendingCount = finalizeResult.ManualPendingCount,
+                message = finalizeResult.ManualPendingCount > 0
+                    ? $"Олимпиада завершена! Автоматический балл: {finalizeResult.AutoScore}. Остальные ответы будут проверены позже."
+                    : $"Олимпиада завершена! Ваш результат: {finalizeResult.TotalScore} баллов."
+            });
+        }
+
+        /// <summary>
+        /// Сохранение всех ответов из сессии в БД (перед завершением)
+        /// </summary>
+        private async Task SaveAllSessionAnswersToDatabase(OlympiadParticipationViewModel session)
+        {
+            foreach (var question in session.Questions)
+            {
+                // Получаем снапшот вопроса
+                var snapshot = await _olympiadRepository.GetQuestionSnapshotByOriginalIdAsync(
+                    session.OlympiadId, question.QuestionId);
+
+                if (snapshot == null) continue;
+
+                object answerData;
+                if (question.Type.StartsWith("auto"))
+                {
+                    answerData = question.SelectedOptionIds ?? new List<int>();
+                }
+                else
+                {
+                    answerData = question.ManualAnswer ?? string.Empty;
+                }
+
+                // Сохраняем в БД
+                await _olympiadRepository.SaveAnswerAndCheckAsync(
+                    session.ParticipantId,
+                    snapshot.QuestSnapshotId,
+                    answerData);
+            }
+        }
+
+        #endregion
+
+        // Добавляем модель запроса
+        public class FinalizeRequest
+        {
+            public int OlympiadId { get; set; }
+            public int ParticipantId { get; set; }
+            public int CurrentQuestionIndex { get; set; }
+            public List<int>? SelectedOptionIds { get; set; }
+            public string? ManualAnswer { get; set; }
+        }
+
+
 
         #endregion
 

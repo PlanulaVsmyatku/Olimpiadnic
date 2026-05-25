@@ -13,146 +13,128 @@ namespace Olimpiadnic.Services.Repos
         /// <summary>
         /// Возвращает лист типа Entities.Olympiad со всеми олимпиадами
         /// </summary>
-        /// <returns></returns>
         Task<IEnumerable<Olympiad>> GetAllOlympiadsAsync();
         /// <summary>
         /// Возвращает конкретную олимпиаду по ID
         /// </summary>
-        /// <param name="olympId">ID конкретной олимпиады</param>
-        /// <returns></returns>
         Task<Olympiad> GetOlympiadByIdAsync(int olympId);
         /// <summary>
         /// Возвращает только олимпиады, которые ещё не начались или в процессе
         /// </summary>
-        /// <returns></returns>
         Task<IEnumerable<Olympiad>> GetActiveOlympiadsAsync();
-
-        // Пагинированный список с фильтрацией
         /// <summary>
         /// Возвращает лист активных олимпиад (не завершившихся), раздёленных на группы по <= pageSize если их больше указанного pageSize, учитывая поисковые фильтры
         /// </summary>
-        /// <param name="searchModel">Модель связанная с поисковыми полями в представлении</param>
-        /// <param name="pageNumber"></param>
-        /// <param name="pageSize">Как много элементов будет на одной странице</param>
-        /// <returns></returns>
         Task<OlympiadPagedResult> GetActiveOlympiadsPagedFilteredAsync(
             OlympiadSearchViewModel? searchModel,
             int pageNumber,
             int pageSize = 12);
-
         /// <summary>
         /// Возвращает расширенную информацию об олимпиаде
         /// </summary>
-        /// <param name="olympId">ID олимпиады с которой нужны детали</param>
-        /// <returns></returns>
         Task<Olympiad?> GetOlympiadWithDetailsAsync(int olympId);
         /// <summary>
         /// Возвращает общее число заданий кокнретной олимпиады
         /// </summary>
-        /// <param name="olympId">ID олимпиады с которой нужно число заданий</param>
-        /// <returns></returns>
         Task<int> GetTotalQuestionsCountAsync(int olympId);
         #endregion
 
         #region Участники
         Task<IEnumerable<OlympiadParticipant>> GetParticipantsByOlympiadIdAsync(int olympId);
         Task<IEnumerable<OlympiadParticipant>> GetParticipantsByUserAndOlympiadIdsAsync(string userId, List<int> olympiadIds);
-
         Task<bool> RegisterParticipantAsync(int olympiadId, int userId);
         Task<bool> IsUserRegisteredAsync(int olympiadId, int userId);
         Task UpdateParticipantAsync(OlympiadParticipant participant);
-        /// <summary>
-        /// Получение или создание участника (если не существует)
-        /// </summary>
-        /// <param name="olympiadId"></param>
-        /// <param name="userId"></param>
-        /// <returns></returns>
         Task<OlympiadParticipant> GetOrCreateParticipantAsync(int olympiadId, int userId);
         #endregion
 
-
-        #region Вопросы
-        /// <summary>
-        /// Получение всех вопросов олимпиады (оригиналы, без снапшотов)
-        /// </summary>
-        /// <param name="olympiadId"></param>
-        /// <returns></returns>
+        #region Вопросы (оригиналы)
         Task<List<Question>> GetQuestionsForParticipationAsync(int olympiadId);
-
-        /// <summary>
-        /// Получение вопроса с его вариантами ответов (для auto)
-        /// </summary>
-        /// <param name="questionId"></param>
-        /// <returns></returns>
         Task<Question?> GetQuestionWithOptionsAsync(int questionId);
-
-        /// <summary>
-        /// Получение конфигурации ручного вопроса
-        /// </summary>
-        /// <param name="questionId"></param>
-        /// <returns></returns>
         Task<ManualQuestionsConfig?> GetManualQuestionConfigAsync(int questionId);
-
-        /// <summary>
-        /// Получение изображений конкретного вопроса
-        /// </summary>
-        /// <param name="questionId"></param>
-        /// <returns></returns>
         Task<List<QuestionAttachment>> GetQuestionAttachmentsAsync(int questionId);
         #endregion
 
         #region Снапшоты
-        /// <summary>
-        /// Получение снапшота вопроса по ID оригинала (для конкретной олимпиады)
-        /// </summary>
         Task<QuestionsSnapshot?> GetQuestionSnapshotByOriginalIdAsync(int olympiadId, int originalQuestionId);
-
-        /// <summary>
-        /// Получение всех снапшотов вопросов олимпиады
-        /// </summary>
-        Task<List<QuestionsSnapshot>> GetQuestionSnapshotsByOlympiadIdAsync(int olympiadId);
-
-        /// <summary>
-        /// Получение вариантов ответов для снапшота (auto-radio/checkbox)
-        /// </summary>
+        Task<List<QuestionsSnapshot>> GetQuestionSnapshotsByOlympiadIdAsync(int originalOlympiadId);
         Task<List<AutoQuestionsSnapshot>> GetAutoOptionsSnapshotByQuestionSnapshotIdAsync(int questionSnapshotId);
-
-        /// <summary>
-        /// Получение конфигурации ручного вопроса для снапшота
-        /// </summary>
         Task<ManualQuestionsConfigSnapshot?> GetManualConfigSnapshotByQuestionSnapshotIdAsync(int questionSnapshotId);
-        #region == Ответы ==
-        /// <summary>
-        /// Сохранение ответа (черновик или финальный)
-        /// </summary>
-        Task SaveAnswerSubmissionAsync(int participantId, int questionSnapshotId, object answerData);
+        Task<QuestionsSnapshot?> GetQuestionSnapshotByIdAsync(int questionSnapshotId);
 
         /// <summary>
-        /// Финальное завершение олимпиады
+        /// Получение снапшота олимпиады по оригинальному ID
         /// </summary>
-        Task CompleteOlympiadAsync(int participantId, int totalScore);
+        Task<OlympiadSnapshot?> GetOlympiadSnapshotByOriginalIdAsync(int originalOlympiadId);
         #endregion
 
+        #region Сохранение ответов и проверка
         /// <summary>
-        /// Получает снапшот вопроса по ID снапшота
+        /// Сохранение ответа на вопрос (один вопрос) с автоматической проверкой для auto-типов
         /// </summary>
-        Task<QuestionsSnapshot?> GetQuestionSnapshotByIdAsync(int questionSnapshotId);
+        /// <returns>Результат проверки с баллами</returns>
+        Task<AnswerSaveResult> SaveAnswerAndCheckAsync(int participantId, int questionSnapshotId, object answerData);
+
+        /// <summary>
+        /// Получение всех сохранённых ответов участника для олимпиады
+        /// </summary>
+        Task<List<SubmittedAnswerDto>> GetParticipantAnswersAsync(int participantId);
+
+        /// <summary>
+        /// Финальное завершение олимпиады с пересчётом всех баллов
+        /// </summary>
+        Task<FinalizeResult> FinalizeOlympiadAsync(int participantId);
         #endregion
 
         #region Результаты участников
-        /// <summary>
-        /// Получает результат участника с его ответами (SubmissionItems)
-        /// </summary>
-        /// <param name="participantId">ID участника</param>
-        /// <returns>Результат участника или null</returns>
         Task<OlympiadResult?> GetParticipantResultAsync(int participantId);
-
-        /// <summary>
-        /// Получает результаты участника с ответами и проверкой для отображения
-        /// </summary>
         Task<ParticipantResultsViewModel?> GetParticipantResultsForDisplayAsync(int participantId);
         #endregion
-
     }
 
+    #region DTOs для ответов
+    public class AnswerSaveResult
+    {
+        public bool Success { get; set; }
+        public string? ErrorMessage { get; set; }
+        public int SubmissionItemId { get; set; }
+        public bool IsAuto { get; set; }
+        public bool? IsCorrect { get; set; }
+        public int? EarnedScore { get; set; }
+        public int MaxScore { get; set; }
+        public string? CorrectAnswerInfo { get; set; }
+
+        // поля для отображения результатов
+        public List<int> CorrectOptionIds { get; set; } = new();
+        public List<int> IncorrectOptionIds { get; set; } = new();
+        public List<int> SelectedOptionIds { get; set; } = new();
+        public bool IsCheckbox { get; set; }
+    }
+
+    public class SubmittedAnswerDto
+    {
+        public int SubmissionItemId { get; set; }
+        public int QuestionSnapshotId { get; set; }
+        public string QuestionType { get; set; } = string.Empty;
+        public string QuestionText { get; set; } = string.Empty;
+        public int? SelectedOptionId { get; set; }
+        public string? SelectedOptionText { get; set; }
+        public string? ManualAnswer { get; set; }
+        public bool? IsCorrect { get; set; }
+        public int? ScoreValue { get; set; }
+        public int MaxScore { get; set; }
+        public string? Commentary { get; set; }
+    }
+
+    public class FinalizeResult
+    {
+        public bool Success { get; set; }
+        public string? ErrorMessage { get; set; }
+        public int TotalScore { get; set; }
+        public int AutoScore { get; set; }
+        public int ManualPendingCount { get; set; }
+    }
+    #endregion
+
 }
+

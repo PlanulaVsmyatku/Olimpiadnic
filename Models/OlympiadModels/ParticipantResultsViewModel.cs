@@ -31,7 +31,28 @@
         public int MaxScore { get; set; }
         public bool? IsCorrect { get; set; }
         public string? Commentary { get; set; }
-        public string Status { get; set; } = "pending"; // correct, incorrect, pending, reviewed
+        public string Status { get; set; } = "pending";
+
+        // Новые поля
+        public List<int> SelectedOptionIds { get; set; } = new();
+        public List<OptionDisplayViewModel> AllOptions { get; set; } = new();
+        public string? CorrectAnswerInfo { get; set; }
+
+        // Поле для определения типа auto-вопроса
+        public string AutoDisplayType => QuestionType switch
+        {
+            "auto-radio" => "Одиночный выбор",
+            "auto-checkbox" => "Множественный выбор",
+            _ => "Авто-вопрос"
+        };
+
+        // Для badge цвета
+        public string AutoDisplayTypeClass => QuestionType switch
+        {
+            "auto-radio" => "bg-primary",
+            "auto-checkbox" => "bg-info",
+            _ => "bg-secondary"
+        };
 
         public string StatusText => Status switch
         {
@@ -50,5 +71,12 @@
             "reviewed" => "text-info",
             _ => "text-muted"
         };
+    }
+
+    public class OptionDisplayViewModel
+    {
+        public int OptionId { get; set; }
+        public string OptionText { get; set; } = string.Empty;
+        public bool IsCorrect { get; set; }
     }
 }

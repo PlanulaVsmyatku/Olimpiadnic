@@ -21,8 +21,12 @@ namespace Olimpiadnic.Controllers
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public OlympiadController(ILogger<OlympiadController> logger, IWebHostEnvironment webHostEnvironment, IOlympiadRepository olympiadRepository,
-                AppDbContext context, IOlympiadSessionService sessionService)
+        public OlympiadController(
+            ILogger<OlympiadController> logger,
+            IWebHostEnvironment webHostEnvironment,
+            IOlympiadRepository olympiadRepository,
+            AppDbContext context,
+            IOlympiadSessionService sessionService)
         {
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;
@@ -48,19 +52,34 @@ namespace Olimpiadnic.Controllers
 
             var totalQuestions = await _olympiadRepository.GetTotalQuestionsCountAsync(id);
             var isRegistered = false;
+            var isCompleted = false;
+            DateTime? completedAt = null;
+            int? userTotalScore = null;
 
-            // Проверяем, авторизован ли пользователь и зарегистрирован ли
+            // Проверяем, авторизован ли пользователь
             if (User.Identity?.IsAuthenticated == true)
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (!string.IsNullOrEmpty(userId))
+                if (!string.IsNullOrEmpty(userId) && int.TryParse(userId, out int userIdInt))
                 {
-                    var participants = await _olympiadRepository.GetParticipantsByOlympiadIdAsync(id);
-                    isRegistered = participants.Any(p => p.UserId == int.Parse(userId));
+                    // Получаем участника
+                    var participant = await _olympiadRepository.GetOrCreateParticipantAsync(id, userIdInt);
+                    isRegistered = participant.Status == "registered"; // если статус не registered, значит начал или завершил
+
+                    // Проверяем, завершил ли пользователь олимпиаду
+                    isCompleted = participant.Status == "completed";
+                    completedAt = participant.CompletedAt;
+
+                    // Если завершил, получаем его результат
+                    if (isCompleted)
+                    {
+                        var result = await _olympiadRepository.GetParticipantResultAsync(participant.ParticipantId);
+                        userTotalScore = result?.TotalScore;
+                    }
                 }
             }
 
-            // Определяем статус
+            // Определяем статус олимпиады
             var now = DateTime.Now;
             string status;
 
@@ -85,7 +104,10 @@ namespace Olimpiadnic.Controllers
                 RegistClosed = olympiad.RegistClosed,
                 TotalQuestions = totalQuestions,
                 IsRegistered = isRegistered,
-                CanParticipate = isRegistered && now >= olympiad.EventStart && now <= olympiad.EventEnd
+                CanParticipate = isRegistered && now >= olympiad.EventStart && now <= olympiad.EventEnd,
+                IsCompleted = isCompleted,
+                CompletedAt = completedAt,
+                UserTotalScore = userTotalScore
             };
 
             return View(viewModel);
@@ -284,7 +306,7 @@ namespace Olimpiadnic.Controllers
             return PartialView("_QuestionPartial", session!.CurrentQuestion);
         }
 
-        /* API методы уже занимаются сохранением состояния вопроса
+        /* API методы уже занимаются сохранением состояния вопроса - удалить?
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
@@ -372,20 +394,7 @@ namespace Olimpiadnic.Controllers
         }
         */
 
-        // Вспомогательный метод для проверки отвеченности вопроса
-        private bool IsQuestionUnanswered(QuestionParticipationViewModel question)
-        {
-            if (question.Type.StartsWith("auto"))
-            {
-                return question.SelectedOptionIds == null || !question.SelectedOptionIds.Any();
-            }
-            else if (question.Type == "manual")
-            {
-                return string.IsNullOrWhiteSpace(question.ManualAnswer);
-            }
-            return true;
-        }
-
+        /* Методы завершения олимпиады - ненужные т.к функционал в API контроллере
         // Метод для подтверждения завершения
         [Authorize]
         public async Task<IActionResult> ConfirmSubmit(int id)
@@ -433,11 +442,11 @@ namespace Olimpiadnic.Controllers
                 }
                 int totalScore = 12; //временная заглушка
                 // Сохраняем все ответы в БД и вычисляем баллы
-                /*
+                
                 var totalScore = await _olympiadRepository.SubmitParticipantAnswersAsync(
                     session.ParticipantId,
                     session.Questions);
-                */
+                
                 // Завершаем олимпиаду
                 await _olympiadRepository.CompleteOlympiadAsync(session.ParticipantId, totalScore);
 
@@ -456,6 +465,21 @@ namespace Olimpiadnic.Controllers
                 return RedirectToAction("Participate", new { id });
             }
         }
+
+        // Вспомогательный метод для проверки отвеченности вопроса
+        private bool IsQuestionUnanswered(QuestionParticipationViewModel question)
+        {
+            if (question.Type.StartsWith("auto"))
+            {
+                return question.SelectedOptionIds == null || !question.SelectedOptionIds.Any();
+            }
+            else if (question.Type == "manual")
+            {
+                return string.IsNullOrWhiteSpace(question.ManualAnswer);
+            }
+            return true;
+        }
+        */
         #endregion
 
     }

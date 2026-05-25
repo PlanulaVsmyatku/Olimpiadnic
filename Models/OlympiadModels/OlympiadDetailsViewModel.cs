@@ -15,5 +15,9 @@
         public int TotalQuestions { get; set; }
         public bool IsRegistered { get; set; }
         public bool CanParticipate { get; set; }
+
+        public bool IsCompleted { get; set; }           // Завершена ли олимпиада пользователем
+        public DateTime? CompletedAt { get; set; }      // Дата завершения
+        public int? UserTotalScore { get; set; }        // Набранные баллы (если завершена)
     }
 }

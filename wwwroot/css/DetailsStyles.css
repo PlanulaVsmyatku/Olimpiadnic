@@ -107,3 +107,48 @@
         color: #667eea;
         margin-bottom: 10px;
     }
+
+.completion-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+    .completion-badge.completed {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .completion-badge.not-completed {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+.score-preview {
+    margin-top: 8px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    text-align: center;
+}
+
+    .score-preview .score-value {
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+
+.btn-results {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+    color: white;
+}
+
+    .btn-results:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        color: white;
+    }
