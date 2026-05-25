@@ -92,10 +92,10 @@
     }
 
 /* Переопределение стилей Bootstrap для кнопок */
-button.btn-participate,
-button.btn-results,
-button.btn-register,
-button.btn-outline-register {
+button.btn-participate.btn-participate,
+button.btn-results.btn-results,
+button.btn-register.btn-register,
+button.btn-outline-register.btn-outline-register {
     display: inline-block;
     font-weight: 600;
     text-align: center;
@@ -110,58 +110,76 @@ button.btn-outline-register {
     box-shadow: none !important;
     width: 100%;
     transition: all 0.3s ease;
+    line-height: 1.5;
+    font-size: 1rem;
 }
 
-/* Специфичные стили для кнопки результатов */
-button.btn-results {
+/* Стили для кнопки результатов */
+button.btn-results.btn-results {
     background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
     border: none !important;
 }
 
-    button.btn-results:hover {
+    button.btn-results.btn-results:hover {
         background: linear-gradient(135deg, #20c997 0%, #28a745 100%) !important;
         transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3) !important;
     }
 
-/* Специфичные стили для кнопки регистрации */
-button.btn-register {
+/* Стили для кнопки participate */
+button.btn-participate.btn-participate {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
     border: none !important;
 }
 
-/* Специфичные стили для outline кнопки */
-button.btn-outline-register {
+    button.btn-participate.btn-participate:hover {
+        opacity: 0.9;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3) !important;
+    }
+
+/* Стили для кнопки регистрации */
+button.btn-register.btn-register {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border: none !important;
+}
+
+    button.btn-register.btn-register:hover {
+        opacity: 0.9;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3) !important;
+    }
+
+/* Стили для outline кнопки */
+button.btn-outline-register.btn-outline-register {
     background: transparent !important;
     border: 2px solid #667eea !important;
     color: #667eea !important;
 }
 
-    button.btn-outline-register:hover:not(:disabled) {
+    button.btn-outline-register.btn-outline-register:hover:not(:disabled) {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
         color: white !important;
         border: 2px solid transparent !important;
     }
 
 /* Общие стили для всех кнопок при наведении */
-button.btn-participate:hover,
-button.btn-register:hover {
-    opacity: 0.9;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3) !important;
+button.btn-participate.btn-participate:hover,
+button.btn-register.btn-register:hover {
+    color: white !important;
 }
 
-button.btn-participate:active,
-button.btn-results:active,
-button.btn-register:active {
+button.btn-participate.btn-participate:active,
+button.btn-results.btn-results:active,
+button.btn-register.btn-register:active {
     transform: translateY(0);
 }
 
 /* Убираем Bootstrap стили при фокусе */
-button.btn-participate:focus,
-button.btn-results:focus,
-button.btn-register:focus,
-button.btn-outline-register:focus {
+button.btn-participate.btn-participate:focus,
+button.btn-results.btn-results:focus,
+button.btn-register.btn-register:focus,
+button.btn-outline-register.btn-outline-register:focus {
     outline: none !important;
     box-shadow: none !important;
 }

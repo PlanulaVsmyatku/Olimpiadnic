@@ -60,13 +60,15 @@ namespace Olimpiadnic.Controllers
                     var olympiadIds = viewModel.Olympiads.Select(o => o.OlympiadId).ToList();
                     var registeredParticipations = await _olympRepository
                         .GetParticipantsByUserAndOlympiadIdsAsync(userId, olympiadIds);
+                    var participationDict = registeredParticipations
+                        .ToDictionary(p => p.OlympId, p => p);
 
                     foreach (var olympiad in viewModel.Olympiads)
                     {
-                        olympiad.IsUserRegistered = registeredParticipations
-                            .Any(p => p.OlympId == olympiad.OlympiadId);
-                        olympiad.IsCompleted = registeredParticipations
-                            .Any(p => p.Status == "completed");
+                        var participation = participationDict.GetValueOrDefault(olympiad.OlympiadId);
+
+                        olympiad.IsUserRegistered = participation != null;
+                        olympiad.IsCompleted = participation?.Status == "completed";
                     }
                 }
             }
