@@ -1,7 +1,808 @@
-﻿@*
-    Если участник => показывать олимпиады, на которые записан и те что завершил
-    Если Сотрудник => показывать созданные олимпиады и те к которым сотрудник назначен
-    Если администратор => просмотр всех олимпиад, харнящихся в БД (не только активных)
-*@
+@using Olimpiadnic.Models.MyOlympiads
+@using System.Security.Claims
+@model MyOlympiadsViewModel
+
 @{
+    Layout = "_ProfileLayout";
+    ViewData["Title"] = "Мои олимпиады";
+    var role = User.FindFirstValue(ClaimTypes.Role) ?? "";
+    bool isParticipant = role == "participant";
+    bool isStaff = role == "staff";
+    bool isAdmin = role == "admin";
+}
+
+@section AdditionalStyles {
+    <link rel="stylesheet" href="~/css/MyOlympiadsStyles.css" />
+}
+
+<!-- Фильтры -->
+<div class="filter-section">
+    <h5 class="mb-3">
+        <i class="fas fa-filter me-2" style="color: #667eea;"></i>
+        Фильтры
+    </h5>
+    
+    <form method="get" asp-action="MyOlympiads" asp-controller="Profile" id="filterForm">
+        @Html.AntiForgeryToken()
+        <div class="row g-3">
+            <div class="col-md-4">
+                <input asp-for="Filter.SearchTitle" class="form-control" placeholder="Название олимпиады">
+            </div>
+            <div class="col-md-3">
+                <input asp-for="Filter.StartDateFrom" class="form-control" type="date" placeholder="Дата от">
+            </div>
+            <div class="col-md-3">
+                <input asp-for="Filter.StartDateTo" class="form-control" type="date" placeholder="Дата до">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search me-1"></i> Поиск
+                </button>
+            </div>
+        </div>
+        
+        @if (isParticipant)
+        {
+            <div class="row mt-3">
+                <div class="col-auto">
+                    <div class="form-check">
+                        <input asp-for="Filter.OnlyCompleted" class="form-check-input" type="checkbox">
+                        <label asp-for="Filter.OnlyCompleted" class="form-check-label">Только завершённые</label>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <div class="form-check">
+                        <input asp-for="Filter.OnlyRegistered" class="form-check-input" type="checkbox">
+                        <label asp-for="Filter.OnlyRegistered" class="form-check-label">Только записанные</label>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a asp-action="MyOlympiads" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-undo-alt me-1"></i> Сбросить
+                    </a>
+                </div>
+            </div>
+        }
+        
+        @if (isStaff || isAdmin)
+        {
+            <div class="row mt-3">
+                <div class="col-auto">
+                    <a asp-action="MyOlympiads" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-undo-alt me-1"></i> Сбросить фильтры
+                    </a>
+                </div>
+                @if (Model.TotalCount > 0)
+                {
+                    <div class="col-auto ms-auto">
+                        <span class="text-muted">
+                            <i class="fas fa-chart-line me-1"></i>
+                            Найдено: @Model.TotalCount
+                        </span>
+                    </div>
+                }
+            </div>
+        }
+    </form>
+</div>
+
+<!-- Участник: карточки олимпиад -->
+@if (isParticipant)
+{
+    if (Model.ParticipantOlympiads.Any())
+    {
+        <div class="row g-4">
+            @foreach (var olympiad in Model.ParticipantOlympiads)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card olympiad-card">
+                        <div class="position-relative">
+                            <img src="@olympiad.ImageUrl" class="card-img-top" alt="@olympiad.Title">
+                            <span class="badge-status" style="background: @olympiad.StatusColor;">
+                                @olympiad.StatusText
+                            </span>
+                        </div>
+                        
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">@olympiad.Title</h5>
+                            <p class="card-text text-muted small">
+                                @(olympiad.Description.Length > 100 ? olympiad.Description.Substring(0, 100) + "..." : olympiad.Description)
+                            </p>
+                            
+                            <div class="mt-auto">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="date-info small">
+                                        <i class="fas fa-calendar-alt"></i> @olympiad.EventStart.ToString("dd.MM.yyyy")
+                                    </div>
+                                    @if (olympiad.IsCompleted && olympiad.UserTotalScore.HasValue)
+                                    {
+                                        <div class="score-circle bg-success bg-opacity-10 text-success">
+                                            @olympiad.Percentage%
+                                        </div>
+                                    }
+                                    else if (olympiad.IsRegistered)
+                                    {
+                                        <div class="score-circle bg-warning bg-opacity-10 text-warning">
+                                            <i class="fas fa-hourglass-half"></i>
+                                        </div>
+                                    }
+                                </div>
+                                
+                                @if (olympiad.IsCompleted && olympiad.UserTotalScore.HasValue)
+                                {
+                                    <div class="mb-3 text-center">
+                                        <strong>Результат:</strong> @olympiad.ScoreDisplay
+                                        <div class="progress mt-1" style="height: 6px;">
+                                            <div class="progress-bar bg-success" style="width: @olympiad.Percentage%"></div>
+                                        </div>
+                                    </div>
+                                }
+                                else if (olympiad.IsRegistered)
+                                {
+                                    <div class="mb-3 text-center text-muted small">
+                                        <i class="fas fa-clock me-1"></i> В процессе
+                                    </div>
+                                }
+                                
+                                <div class="d-grid">
+                                    <a href="@Url.Action("Results", "Olympiad", new { id = olympiad.OlympiadId })" 
+                                       class="btn btn-outline-primary">
+                                        <i class="fas fa-chart-line me-2"></i>
+                                        @(olympiad.IsCompleted ? "Результаты" : "Продолжить")
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fas fa-trophy fa-3x text-muted mb-3"></i>
+            <h5>Нет олимпиад</h5>
+            <p class="text-muted">Вы ещё не записаны ни на одну олимпиаду</p>
+            <a href="/" class="btn btn-primary">Перейти к олимпиадам</a>
+        </div>
+    }
+}
+
+<!-- Сотрудник: карточки олимпиад -->
+@if (isStaff)
+{
+    if (Model.StaffOlympiads.Any())
+    {
+        <div class="row g-4">
+            @foreach (var olympiad in Model.StaffOlympiads)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card olympiad-card">
+                        <div class="position-relative">
+                            <img src="@olympiad.ImageUrl" class="card-img-top" alt="@olympiad.Title">
+                            <span class="badge-status" style="background: @olympiad.StatusColor;">
+                                @olympiad.StatusText
+                            </span>
+                            
+                            <!-- Выпадающее меню -->
+                            <div class="dropdown-actions">
+                                <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-h"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="@Url.Action("Create", "StaffBoard", new { id = olympiad.OlympiadId })">
+                                            <i class="fas fa-edit me-2"></i> Редактировать
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="@Url.Action("OlympResults", "StaffBoard", new { id = olympiad.OlympiadId })">
+                                            <i class="fas fa-users me-2"></i> Все результаты
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">@olympiad.Title</h5>
+                            <p class="card-text text-muted small">@olympiad.Description</p>
+                            
+                            <div class="mb-2">
+                                <span class="role-badge">
+                                    <i class="fas fa-user-tag me-1"></i> @olympiad.RoleText
+                                </span>
+                            </div>
+                            
+                            <div class="mt-auto">
+                                <div class="d-flex justify-content-between mb-3">
+                                    <div class="small text-muted">
+                                        <i class="fas fa-users me-1"></i> Участников: @(olympiad.TotalParticipants ?? 0)
+                                    </div>
+                                    @if (olympiad.HasUncheckedAnswers)
+                                    {
+                                        <div class="small text-warning">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            Непроверено: @olympiad.UncheckedManualAnswers
+                                        </div>
+                                    }
+                                </div>
+                                
+                                <div class="d-flex gap-2">
+                                    @if (olympiad.HasUncheckedAnswers)
+                                    {
+                                        <a href="@Url.Action("ManualChecks", "StaffBoard", new { id = olympiad.OlympiadId })" 
+                                           class="btn btn-warning btn-sm flex-grow-1">
+                                            <i class="fas fa-clipboard-list me-1"></i> Проверить
+                                        </a>
+                                    }
+                                    @if (olympiad.HasParticipants)
+                                    {
+                                        <a href="@Url.Action("OlympResults", "StaffBoard", new { id = olympiad.OlympiadId })" 
+                                           class="btn btn-outline-secondary btn-sm flex-grow-1">
+                                            <i class="fas fa-chart-line me-1"></i> Результаты
+                                        </a>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fas fa-chalkboard-teacher fa-3x text-muted mb-3"></i>
+            <h5>Нет олимпиад</h5>
+            <p class="text-muted">Вы не создали и не назначены ни на одну олимпиаду</p>
+            <a href="@Url.Action("Create", "StaffBoard")" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-2"></i> Создать олимпиаду
+            </a>
+        </div>
+    }
+}
+
+<!-- Администратор: таблица со всеми полями -->
+@if (isAdmin)
+{
+    if (Model.AdminOlympiads.Any())
+    {
+        <div class="admin-table">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Название</th>
+                            <th>Описание</th>
+                            <th>Требования</th>
+                            <th>Статус</th>
+                            <th>Начало олимпиады</th>
+                            <th>Окончание олимпиады</th>
+                            <th>Открытие регистрации</th>
+                            <th>Закрытие регистрации</th>
+                            <th style="width: 100px">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var olympiad in Model.AdminOlympiads)
+                        {
+                            <tr data-olympiad-id="@olympiad.OlympiadId">
+                                <td class="align-middle">@olympiad.OlympiadId</td>
+                                
+                                <!-- Название - редактируемое -->
+                                <td class="align-middle">
+                                    <div class="editable-field" 
+                                         data-field="title" 
+                                         data-value="@Html.Raw(olympiad.Title)"
+                                         onclick="openEditModal(@olympiad.OlympiadId, 'title', '@Html.Raw(olympiad.Title.Replace("'", "\\'"))')">
+                                        <strong>@olympiad.Title</strong>
+                                        <i class="fas fa-pencil-alt ms-1 text-muted" style="font-size: 0.7rem; opacity: 0.5;"></i>
+                                    </div>
+                                </td>
+                                
+                                <!-- Описание - редактируемое (большое поле) -->
+                                <td class="align-middle">
+                                    <div class="editable-field" 
+                                         data-field="description"
+                                         onclick="openEditModal(@olympiad.OlympiadId, 'description', `@Html.Raw(olympiad.Description.Replace("`", "\\`"))`)">
+                                        <div class="description-preview">
+                                            @(olympiad.Description.Length > 100 ? olympiad.Description.Substring(0, 100) + "..." : olympiad.Description)
+                                        </div>
+                                        <i class="fas fa-pencil-alt ms-1 text-muted" style="font-size: 0.7rem; opacity: 0.5;"></i>
+                                    </div>
+                                </td>
+                                
+                                <!-- Требования - редактируемое -->
+                                <td class="align-middle">
+                                    <div class="editable-field" 
+                                         data-field="credentials"
+                                         onclick="openEditModal(@olympiad.OlympiadId, 'credentials', `@Html.Raw(olympiad.Credentials?.Replace("`", "\\`") ?? "")`)">
+                                        @(!string.IsNullOrEmpty(olympiad.Credentials) 
+                                            ? (olympiad.Credentials.Length > 50 ? olympiad.Credentials.Substring(0, 50) + "..." : olympiad.Credentials) 
+                                            : "<span class='text-muted'>—</span>")
+                                        <i class="fas fa-pencil-alt ms-1 text-muted" style="font-size: 0.7rem; opacity: 0.5;"></i>
+                                    </div>
+                                </td>
+                                
+                                <!-- Статус -->
+                                <td class="align-middle">
+                                    <select class="form-select form-select-sm status-select" 
+                                            data-olympiad-id="@olympiad.OlympiadId"
+                                            style="width: auto; min-width: 120px;">
+                                        <option value="available" selected="@(olympiad.Status == "available")">Доступна</option>
+                                        <option value="in_progress" selected="@(olympiad.Status == "in_progress")">В процессе</option>
+                                        <option value="ended" selected="@(olympiad.Status == "ended")">Завершена</option>
+                                    </select>
+                                </td>
+                                
+                                <!-- Начало олимпиады -->
+                                <td class="align-middle">
+                                    <input type="datetime-local" 
+                                           class="form-control form-control-sm datetime-input" 
+                                           data-field="eventStart"
+                                           data-olympiad-id="@olympiad.OlympiadId"
+                                           value="@olympiad.EventStart.ToString("yyyy-MM-ddTHH:mm")">
+                                </td>
+                                
+                                <!-- Окончание олимпиады -->
+                                <td class="align-middle">
+                                    <input type="datetime-local" 
+                                           class="form-control form-control-sm datetime-input" 
+                                           data-field="eventEnd"
+                                           data-olympiad-id="@olympiad.OlympiadId"
+                                           value="@olympiad.EventEnd.ToString("yyyy-MM-ddTHH:mm")">
+                                </td>
+                                
+                                <!-- Открытие регистрации -->
+                                <td class="align-middle">
+                                    <input type="datetime-local" 
+                                           class="form-control form-control-sm datetime-input" 
+                                           data-field="registOpen"
+                                           data-olympiad-id="@olympiad.OlympiadId"
+                                           value="@olympiad.RegistOpen.ToString("yyyy-MM-ddTHH:mm")">
+                                </td>
+                                
+                                <!-- Закрытие регистрации -->
+                                <td class="align-middle">
+                                    <input type="datetime-local" 
+                                           class="form-control form-control-sm datetime-input" 
+                                           data-field="registClosed"
+                                           data-olympiad-id="@olympiad.OlympiadId"
+                                           value="@olympiad.RegistClosed.ToString("yyyy-MM-ddTHH:mm")">
+                                </td>
+                                
+                                <!-- Действия -->
+                                <td class="align-middle">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="@Url.Action("Create", "StaffBoard", new { id = olympiad.OlympiadId })" 
+                                           class="btn btn-outline-secondary" title="Полное редактирование">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-outline-danger" 
+                                                onclick="deleteOlympiad(@olympiad.OlympiadId, '@Html.Raw(olympiad.Title.Replace("'", "\\'"))')"
+                                                title="Удалить">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Индикатор сохранения -->
+        <div id="saveIndicator" class="position-fixed bottom-0 end-0 m-3" style="display: none; z-index: 1000;">
+            <div class="toast align-items-center text-white bg-success border-0" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-check-circle me-2"></i>Изменения сохранены
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Модальное окно для редактирования текстовых полей -->
+        <div class="modal fade" id="editTextModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editModalTitle">Редактирование</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="editOlympiadId" value="">
+                        <input type="hidden" id="editField" value="">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" id="editFieldLabel"></label>
+                            <textarea id="editTextValue" class="form-control" rows="8" style="font-family: monospace;"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="button" class="btn btn-primary" onclick="saveTextEdit()">
+                            <i class="fas fa-save me-1"></i> Сохранить
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fas fa-database fa-3x text-muted mb-3"></i>
+            <h5>Нет олимпиад</h5>
+            <p class="text-muted">В базе данных пока нет олимпиад</p>
+        </div>
+    }
+}
+
+<!-- Пагинация -->
+@if (Model.TotalPages > 1)
+{
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                <a class="page-link" href="@Url.Action("MyOlympiads", new { 
+                    page = 1,
+                    searchTitle = Model.Filter?.SearchTitle,
+                    startDateFrom = Model.Filter?.StartDateFrom?.ToString("yyyy-MM-dd"),
+                    startDateTo = Model.Filter?.StartDateTo?.ToString("yyyy-MM-dd"),
+                    endDateFrom = Model.Filter?.EndDateFrom?.ToString("yyyy-MM-dd"),
+                    endDateTo = Model.Filter?.EndDateTo?.ToString("yyyy-MM-dd"),
+                    onlyCompleted = Model.Filter?.OnlyCompleted,
+                    onlyRegistered = Model.Filter?.OnlyRegistered
+                })">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                <a class="page-link" href="@Url.Action("MyOlympiads", new { 
+                    page = Model.CurrentPage - 1,
+                    searchTitle = Model.Filter?.SearchTitle,
+                    startDateFrom = Model.Filter?.StartDateFrom?.ToString("yyyy-MM-dd"),
+                    startDateTo = Model.Filter?.StartDateTo?.ToString("yyyy-MM-dd"),
+                    endDateFrom = Model.Filter?.EndDateFrom?.ToString("yyyy-MM-dd"),
+                    endDateTo = Model.Filter?.EndDateTo?.ToString("yyyy-MM-dd"),
+                    onlyCompleted = Model.Filter?.OnlyCompleted,
+                    onlyRegistered = Model.Filter?.OnlyRegistered
+                })">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+            
+            @{
+                int startPage = Math.Max(1, Model.CurrentPage - 2);
+                int endPage = Math.Min(Model.TotalPages, Model.CurrentPage + 2);
+                if (startPage > 1)
+                {
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                }
+                for (int i = startPage; i <= endPage; i++)
+                {
+                    <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                        <a class="page-link" href="@Url.Action("MyOlympiads", new { 
+                            page = i,
+                            searchTitle = Model.Filter?.SearchTitle,
+                            startDateFrom = Model.Filter?.StartDateFrom?.ToString("yyyy-MM-dd"),
+                            startDateTo = Model.Filter?.StartDateTo?.ToString("yyyy-MM-dd"),
+                            endDateFrom = Model.Filter?.EndDateFrom?.ToString("yyyy-MM-dd"),
+                            endDateTo = Model.Filter?.EndDateTo?.ToString("yyyy-MM-dd"),
+                            onlyCompleted = Model.Filter?.OnlyCompleted,
+                            onlyRegistered = Model.Filter?.OnlyRegistered
+                        })">@i</a>
+                    </li>
+                }
+                if (endPage < Model.TotalPages)
+                {
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                }
+            }
+            
+            <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                <a class="page-link" href="@Url.Action("MyOlympiads", new { 
+                    page = Model.CurrentPage + 1,
+                    searchTitle = Model.Filter?.SearchTitle,
+                    startDateFrom = Model.Filter?.StartDateFrom?.ToString("yyyy-MM-dd"),
+                    startDateTo = Model.Filter?.StartDateTo?.ToString("yyyy-MM-dd"),
+                    endDateFrom = Model.Filter?.EndDateFrom?.ToString("yyyy-MM-dd"),
+                    endDateTo = Model.Filter?.EndDateTo?.ToString("yyyy-MM-dd"),
+                    onlyCompleted = Model.Filter?.OnlyCompleted,
+                    onlyRegistered = Model.Filter?.OnlyRegistered
+                })">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                <a class="page-link" href="@Url.Action("MyOlympiads", new { 
+                    page = Model.TotalPages,
+                    searchTitle = Model.Filter?.SearchTitle,
+                    startDateFrom = Model.Filter?.StartDateFrom?.ToString("yyyy-MM-dd"),
+                    startDateTo = Model.Filter?.StartDateTo?.ToString("yyyy-MM-dd"),
+                    endDateFrom = Model.Filter?.EndDateFrom?.ToString("yyyy-MM-dd"),
+                    endDateTo = Model.Filter?.EndDateTo?.ToString("yyyy-MM-dd"),
+                    onlyCompleted = Model.Filter?.OnlyCompleted,
+                    onlyRegistered = Model.Filter?.OnlyRegistered
+                })">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+}
+
+@section ProfileScripts {
+    <script>
+        // Глобальные переменные для модального окна
+        let currentEditOlympiadId = null;
+        let currentEditField = null;
+        let saveTimeout;
+
+        // Открытие модального окна для редактирования текстового поля
+        function openEditModal(olympiadId, field, currentValue) {
+            currentEditOlympiadId = olympiadId;
+            currentEditField = field;
+
+            const modal = new bootstrap.Modal(document.getElementById('editTextModal'));
+            const titleMap = {
+                'title': 'Название олимпиады',
+                'description': 'Описание олимпиады',
+                'credentials': 'Требования к участникам'
+            };
+
+            document.getElementById('editModalTitle').innerText = titleMap[field] || 'Редактирование';
+            document.getElementById('editFieldLabel').innerText = titleMap[field] || 'Значение';
+            document.getElementById('editOlympiadId').value = olympiadId;
+            document.getElementById('editField').value = field;
+            document.getElementById('editTextValue').value = currentValue || '';
+
+            modal.show();
+        }
+
+        // Сохранение текстового поля из модального окна
+        async function saveTextEdit() {
+            const olympiadId = currentEditOlympiadId;
+            const field = currentEditField;
+            const newValue = document.getElementById('editTextValue').value;
+            // Получаем токен
+            const tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+            const token = tokenInput ? tokenInput.value : '';
+
+                const response = await fetch('/Profile/UpdateOlympiadField', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': token  // Используем полученный токен
+                    },
+                    body: JSON.stringify({
+                        olympiadId: olympiadId,
+                        field: field,
+                        value: newValue
+                    })
+                });
+
+            if (!olympiadId || !field) return;
+
+            showSavingIndicator(true);
+
+            try {
+                const response = await fetch('/Profile/UpdateOlympiadField', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        olympiadId: olympiadId,
+                        field: field,
+                        value: newValue
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const row = document.querySelector(`tr[data-olympiad-id="${olympiadId}"]`);
+                    if (row) {
+                        const fieldDiv = row.querySelector(`.editable-field[data-field="${field}"]`);
+                        if (fieldDiv) {
+                            if (field === 'title') {
+                                fieldDiv.innerHTML = `<strong>${escapeHtml(newValue)}</strong><i class="fas fa-pencil-alt ms-1 text-muted" style="font-size: 0.7rem; opacity: 0.5;"></i>`;
+                                fieldDiv.setAttribute('data-value', newValue);
+                                const deleteBtn = row.querySelector('.btn-outline-danger');
+                                if (deleteBtn && deleteBtn.getAttribute('onclick')) {
+                                    const newOnClick = deleteBtn.getAttribute('onclick').replace(/'.*'/, `'${escapeHtml(newValue).replace(/'/g, "\\'")}'`);
+                                    deleteBtn.setAttribute('onclick', newOnClick);
+                                }
+                            } else if (field === 'description') {
+                                const preview = newValue.length > 100 ? newValue.substring(0, 100) + '...' : newValue;
+                                fieldDiv.innerHTML = `<div class="description-preview">${escapeHtml(preview)}</div><i class="fas fa-pencil-alt ms-1 text-muted" style="font-size: 0.7rem; opacity: 0.5;"></i>`;
+                                fieldDiv.setAttribute('onclick', `openEditModal(${olympiadId}, 'description', \`${escapeHtml(newValue).replace(/`/g, '\\`')}\`)`);
+                            } else if (field === 'credentials') {
+                                const preview = newValue.length > 50 ? newValue.substring(0, 50) + '...' : newValue;
+                                fieldDiv.innerHTML = `${escapeHtml(preview) || '<span class="text-muted">—</span>'}<i class="fas fa-pencil-alt ms-1 text-muted" style="font-size: 0.7rem; opacity: 0.5;"></i>`;
+                                fieldDiv.setAttribute('onclick', `openEditModal(${olympiadId}, 'credentials', \`${escapeHtml(newValue).replace(/`/g, '\\`')}\`)`);
+                            }
+                        }
+                    }
+
+                    showToastMessage('Успешно!', 'Изменения сохранены', 'success');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editTextModal'));
+                    modal.hide();
+                } else {
+                    showToastMessage('Ошибка!', data.message || 'Не удалось сохранить изменения', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToastMessage('Ошибка!', 'Произошла ошибка при сохранении', 'error');
+            } finally {
+                showSavingIndicator(false);
+            }
+        }
+
+        // Сохранение datetime полей и статуса
+        async function saveField(olympiadId, field, value) {
+            try {
+                const response = await fetch('/Profile/UpdateOlympiadField', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: JSON.stringify({
+                        olympiadId: olympiadId,
+                        field: field,
+                        value: value
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToastMessage('Успешно!', 'Изменения сохранены', 'success');
+                } else {
+                    showToastMessage('Ошибка!', data.message || 'Не удалось сохранить изменения', 'error');
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToastMessage('Ошибка!', 'Произошла ошибка при сохранении', 'error');
+                location.reload();
+            }
+        }
+
+        // Обработчики
+        document.addEventListener('DOMContentLoaded', function() {
+            const datetimeInputs = document.querySelectorAll('.datetime-input');
+            datetimeInputs.forEach(input => {
+                let timeoutId;
+                input.addEventListener('change', function() {
+                    clearTimeout(timeoutId);
+                    const olympiadId = this.getAttribute('data-olympiad-id');
+                    const field = this.getAttribute('data-field');
+                    const value = this.value;
+                    timeoutId = setTimeout(() => {
+                        saveField(olympiadId, field, value);
+                    }, 500);
+                });
+            });
+
+            const statusSelects = document.querySelectorAll('.status-select');
+            statusSelects.forEach(select => {
+                select.addEventListener('change', function() {
+                    const olympiadId = this.getAttribute('data-olympiad-id');
+                    const value = this.value;
+                    saveField(olympiadId, 'status', value);
+                });
+            });
+        });
+
+        // Вспомогательные функции
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function showSavingIndicator(show) {
+            const indicator = document.getElementById('saveIndicator');
+            if (show) {
+                indicator.style.display = 'block';
+                if (saveTimeout) clearTimeout(saveTimeout);
+            } else {
+                saveTimeout = setTimeout(() => {
+                    indicator.style.display = 'none';
+                }, 2000);
+            }
+        }
+
+        function showToastMessage(title, message, type) {
+            const container = document.getElementById('global-toast-container');
+            if (!container) {
+                console.error('Toast container not found');
+                return;
+            }
+
+            const toast = document.createElement('div');
+            const icon = type === 'success' ? 'fa-check-circle' :
+                         type === 'error' ? 'fa-exclamation-circle' :
+                         type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+
+            toast.className = `toast-notification toast-${type}`;
+            toast.innerHTML = `
+                <i class="fas ${icon} fa-lg"></i>
+                <div style="flex: 1;">
+                    <strong>${escapeHtml(title)}</strong>
+                    ${message ? `<div style="font-size: 0.85rem; margin-top: 2px;">${escapeHtml(message)}</div>` : ''}
+                </div>
+            `;
+
+            container.appendChild(toast);
+
+            // Автоматическое удаление через 3 секунды
+            setTimeout(() => {
+                toast.classList.add('fade-out');
+                setTimeout(() => {
+                    if (toast.parentNode) toast.remove();
+                }, 300);
+            }, 3000);
+
+            // Ручное закрытие по клику
+            toast.addEventListener('click', () => {
+                toast.classList.add('fade-out');
+                setTimeout(() => {
+                    if (toast.parentNode) toast.remove();
+                }, 300);
+            });
+        }
+
+        function deleteOlympiad(id, title) {
+            if (confirm(`Вы уверены, что хотите удалить олимпиаду "${title}"? Это действие необратимо.`)) {
+                fetch(`/Profile/DeleteOlympiad?id=${id}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToastMessage('Успешно!', 'Олимпиада удалена', 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showToastMessage('Ошибка!', data.message || 'Ошибка при удалении', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToastMessage('Ошибка!', 'Произошла ошибка при удалении', 'error');
+                });
+            }
+        }
+    </script>
+}
+
+@functions {
+    public string GetStatusColorForAdmin(string status)
+    {
+        return status switch
+        {
+            "available" => "#10b981",
+            "in_progress" => "#3b82f6",
+            "ended" => "#ef4444",
+            _ => "#6b7280"
+        };
+    }
 }

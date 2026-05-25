@@ -7,12 +7,12 @@ using System.Security.Claims;
 namespace Olimpiadnic.Controllers
 {
     [Authorize]
-    public class CreateOlympiadController : Controller
+    public class StaffBoardController : Controller
     {
-        private readonly ILogger<CreateOlympiadController> _logger;
+        private readonly ILogger<StaffBoardController> _logger;
         private readonly IWebHostEnvironment _webHostEnvironment;
 
-        public CreateOlympiadController(ILogger<CreateOlympiadController> logger, IWebHostEnvironment webHostEnvironment)
+        public StaffBoardController(ILogger<StaffBoardController> logger, IWebHostEnvironment webHostEnvironment)
         {
             _logger = logger;
             _webHostEnvironment = webHostEnvironment;

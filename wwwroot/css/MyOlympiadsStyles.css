@@ -1,0 +1,275 @@
+﻿.filter-section {
+    background: white;
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.olympiad-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    height: 100%;
+}
+
+    .olympiad-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+
+.card-img-top {
+    height: 160px;
+    object-fit: cover;
+}
+
+.badge-status {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    backdrop-filter: blur(4px);
+    background: rgba(0,0,0,0.6) !important;
+}
+
+.score-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.btn-outline-custom {
+    border: 1px solid #e2e8f0;
+    background: white;
+    border-radius: 10px;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+    .btn-outline-custom:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+
+.dropdown-actions {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+}
+
+    .dropdown-actions .btn {
+        background: rgba(255,255,255,0.9);
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+    }
+
+.admin-table {
+    background: white;
+    border-radius: 16px;
+    overflow-x: auto;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+    .admin-table th {
+        background: #f8fafc;
+        padding: 1rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border-bottom: 2px solid #e2e8f0;
+        white-space: nowrap;
+    }
+
+    .admin-table td {
+        padding: 0.75rem 1rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.875rem;
+    }
+
+    .admin-table tr:hover {
+        background: #f8fafc;
+    }
+
+.editable-field {
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: inline-block;
+    max-width: 250px;
+}
+
+    .editable-field:hover {
+        background: #e2e8f0;
+        transform: scale(1.02);
+    }
+
+.description-preview {
+    max-width: 250px;
+    word-wrap: break-word;
+}
+
+.datetime-input {
+    min-width: 160px;
+    font-size: 0.8rem;
+}
+
+.status-select {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+    .status-select option[value="available"] {
+        color: #10b981;
+    }
+
+    .status-select option[value="in_progress"] {
+        color: #3b82f6;
+    }
+
+    .status-select option[value="ended"] {
+        color: #ef4444;
+    }
+
+#editTextValue {
+    font-family: 'Segoe UI', system-ui, monospace;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.toast {
+    min-width: 250px;
+    border-radius: 12px;
+}
+
+.pagination {
+    gap: 0.25rem;
+}
+
+.page-link {
+    border-radius: 8px;
+    margin: 0;
+    border: 1px solid #e2e8f0;
+    color: #1e293b;
+}
+
+.page-item.active .page-link {
+    background: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 16px;
+}
+
+.role-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    background: #e2e8f0;
+}
+
+/* Анимация для fade-out */
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+        visibility: hidden;
+    }
+}
+
+.toast-notification.fade-out {
+    animation: fadeOut 0.3s ease-out forwards;
+}
+
+/* Стили для модального окна */
+.modal-content {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 16px 16px 0 0;
+    border-bottom: none;
+}
+
+    .modal-header .btn-close {
+        filter: brightness(0) invert(1);
+    }
+
+.modal-footer {
+    border-top: 1px solid #e2e8f0;
+}
+
+/* Индикатор сохранения */
+#saveIndicator .toast {
+    background: #10b981 !important;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Стили для datetime input */
+input[type="datetime-local"] {
+    padding: 6px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: white;
+}
+
+    input[type="datetime-local"]:focus {
+        outline: none;
+        border-color: #3b82f6;
+        ring: 2px solid rgba(59, 130, 246, 0.2);
+    }
+
+/* Адаптив для таблицы на мобильных */
+@media (max-width: 768px) {
+    .admin-table {
+        font-size: 0.75rem;
+    }
+
+        .admin-table th,
+        .admin-table td {
+            padding: 0.5rem;
+        }
+
+    .datetime-input {
+        min-width: 120px;
+        font-size: 0.7rem;
+    }
+
+    .editable-field {
+        max-width: 150px;
+    }
+}

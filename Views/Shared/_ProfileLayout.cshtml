@@ -25,26 +25,23 @@
                href="/Profile/Profile">
                 <i class="fas fa-user-circle"></i> Профиль
             </a>
+            <a class="nav-link @(currentAction == "MyOlympiads" ? "active" : "")"
+               href="/Profile/MyOlympiads">
+                <i class="fas fa-trophy"></i> Мои олимпиады
+            </a>
 
             @if (isParticipant)
             {
-                <a class="nav-link @(currentAction == "MyOlympiads" ? "active" : "")"
-                   href="/Profile/MyOlympiads">
-                    <i class="fas fa-trophy"></i> Мои олимпиады
-                </a>
+                <!--может потом чего добавлю-->
             }
             else if (isStaff)
             {
-                <a class="nav-link @(currentAction == "MyOlympiads" ? "active" : "")"
-                   href="/Profile/MyOlympiads">
-                    <i class="fas fa-trophy"></i> Мои олимпиады
-                </a>
                 <a class="nav-link @(currentAction == "Create" ? "active" : "")"
-                   href="/CreateOlympiad/Create">
+                   href="/StaffBoard/Create">
                     <i class="fas fa-plus-circle"></i> Создать олимпиаду
                 </a>
                 <a class="nav-link @(currentAction == "ManualChecks" ? "active" : "")"
-                   href="/Olympiad/ManualChecks">
+                   href="/StaffBoard/ManualChecks">
                     <i class="fas fa-clipboard-list"></i> Проверка ответов
                 </a>
             }

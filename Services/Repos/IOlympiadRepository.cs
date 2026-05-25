@@ -1,4 +1,5 @@
 using Olimpiadnic.Entities;
+using Olimpiadnic.Models.MyOlympiads;
 using Olimpiadnic.Models.OlympiadModels;
 using Olimpiadnic.Models.RoleModels;
 using System;
@@ -37,6 +38,10 @@ namespace Olimpiadnic.Services.Repos
         /// Возвращает общее число заданий кокнретной олимпиады
         /// </summary>
         Task<int> GetTotalQuestionsCountAsync(int olympId);
+        /// <summary>
+        /// Закрепление изменений таблицы олимпиад
+        /// </summary>
+        Task UpdateOlympiadAsync(Olympiad olympiad);
         #endregion
 
         #region Участники
@@ -90,6 +95,35 @@ namespace Olimpiadnic.Services.Repos
         Task<OlympiadResult?> GetParticipantResultAsync(int participantId);
         Task<ParticipantResultsViewModel?> GetParticipantResultsForDisplayAsync(int participantId);
         #endregion
+
+        #region Мои олимпиады
+        /// <summary>
+        /// Получение олимпиад участника с результатами
+        /// </summary>
+        Task<MyOlympiadsPagedResult<ParticipantOlympiadViewModel>> GetParticipantOlympiadsAsync(
+            int userId,
+            MyOlympiadsFilterViewModel? filter,
+            int pageNumber,
+            int pageSize = 6);
+
+        /// <summary>
+        /// Получение олимпиад сотрудника (автор или проверяющий)
+        /// </summary>
+        Task<MyOlympiadsPagedResult<StaffOlympiadViewModel>> GetStaffOlympiadsAsync(
+            int userId,
+            MyOlympiadsFilterViewModel? filter,
+            int pageNumber,
+            int pageSize = 6);
+
+        /// <summary>
+        /// Получение всех олимпиад для администратора
+        /// </summary>
+        Task<MyOlympiadsPagedResult<AdminOlympiadViewModel>> GetAllOlympiadsForAdminAsync(
+            MyOlympiadsFilterViewModel? filter,
+            int pageNumber,
+            int pageSize = 10);
+        #endregion
+
     }
 
     #region DTOs для ответов
@@ -135,6 +169,22 @@ namespace Olimpiadnic.Services.Repos
         public int ManualPendingCount { get; set; }
     }
     #endregion
+
+    /// <summary>
+    /// Результат пагинации для моих олимпиад
+    /// </summary>
+    public class MyOlympiadsPagedResult<T>
+    {
+        public List<T> Items { get; set; } = new();
+        public int CurrentPage { get; set; }
+        public int TotalPages { get; set; }
+        public int TotalCount { get; set; }
+        public int PageSize { get; set; }
+        public MyOlympiadsFilterViewModel? Filter { get; set; }
+
+        public bool HasPreviousPage => CurrentPage > 1;
+        public bool HasNextPage => CurrentPage < TotalPages;
+    }
 
 }
 

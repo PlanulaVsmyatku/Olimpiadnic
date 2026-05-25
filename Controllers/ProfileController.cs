@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Olimpiadnic.Data;
+using Olimpiadnic.Models.MyOlympiads;
 using Olimpiadnic.Models.OlympiadModels;
 using Olimpiadnic.Models.RoleModels;
 using Olimpiadnic.Services;
+using Olimpiadnic.Services.Repos;
 using System.Security.Claims;
 
 namespace Olimpiadnic.Controllers
@@ -15,15 +17,18 @@ namespace Olimpiadnic.Controllers
     {
         private readonly ILogger<ProfileController> _logger;
         private readonly AppDbContext _context;
+        private readonly IOlympiadRepository _olympiadRepository;
         private readonly IPasswordService _passwordService;
 
         public ProfileController(
             ILogger<ProfileController> logger,
             AppDbContext context,
-            IPasswordService passwordService)
+            IPasswordService passwordService,
+            IOlympiadRepository olympiadRepository)
         {
             _logger = logger;
             _context = context;
+            _olympiadRepository = olympiadRepository;
             _passwordService = passwordService;
         }
 
@@ -101,66 +106,176 @@ namespace Olimpiadnic.Controllers
             }
         }
 
-        // GET: /Profile/MyOlympiads (для участника - записанные, для сотрудника - созданные)
-        /*
         [HttpGet]
-        public async Task<IActionResult> MyOlympiads()
+        public async Task<IActionResult> MyOlympiads(MyOlympiadsFilterViewModel? filter, int page = 1)
         {
-            var role = User.FindFirstValue(ClaimTypes.Role) ?? UserRoles.participant;
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
-            
-            if (role == UserRoles.participant)
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
             {
-                var enrolledOlympiads = await GetEnrolledOlympiads(userId);
-                ViewBag.Role = "Participant";
-                return View("MyOlympiads_Participant", enrolledOlympiads);
+                return RedirectToAction("Login", "Account");
             }
-            else if (role == UserRoles.staff || role == UserRoles.admin)
+
+            var role = User.FindFirstValue(ClaimTypes.Role) ?? "";
+            var viewModel = new MyOlympiadsViewModel
             {
-                var createdOlympiads = await GetCreatedOlympiads(userId);
-                ViewBag.Role = "Staff";
-                return View("MyOlympiads_Staff", createdOlympiads);
+                Filter = filter ?? new MyOlympiadsFilterViewModel(),
+                CurrentPage = page,
+                PageSize = 6
+            };
+
+            try
+            {
+                if (role == "participant")
+                {
+                    var result = await _olympiadRepository.GetParticipantOlympiadsAsync(
+                        userId, viewModel.Filter, page, viewModel.PageSize);
+                    viewModel.ParticipantOlympiads = result.Items;
+                    viewModel.CurrentPage = result.CurrentPage;
+                    viewModel.TotalPages = result.TotalPages;
+                    viewModel.TotalCount = result.TotalCount;
+                    viewModel.PageSize = result.PageSize;
+                }
+                else if (role == "staff")
+                {
+                    var result = await _olympiadRepository.GetStaffOlympiadsAsync(
+                        userId, viewModel.Filter, page, viewModel.PageSize);
+                    viewModel.StaffOlympiads = result.Items;
+                    viewModel.CurrentPage = result.CurrentPage;
+                    viewModel.TotalPages = result.TotalPages;
+                    viewModel.TotalCount = result.TotalCount;
+                    viewModel.PageSize = result.PageSize;
+                }
+                else if (role == "admin")
+                {
+                    var result = await _olympiadRepository.GetAllOlympiadsForAdminAsync(
+                        viewModel.Filter, page, 10);
+                    viewModel.AdminOlympiads = result.Items;
+                    viewModel.CurrentPage = result.CurrentPage;
+                    viewModel.TotalPages = result.TotalPages;
+                    viewModel.TotalCount = result.TotalCount;
+                    viewModel.PageSize = result.PageSize;
+                }
             }
-            
-            return RedirectToAction(nameof(Profile));
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при загрузке страницы Мои олимпиады для роли {Role}", role);
+                TempData["Error"] = "Произошла ошибка при загрузке данных";
+            }
+
+            return View(viewModel);
         }
 
-        // GET: /Profile/CompletedOlympiads (только для участника)
-        [HttpGet]
-        public async Task<IActionResult> CompletedOlympiads()
-        {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
-            var completed = await GetCompletedOlympiads(userId);
-            return View(completed);
-        }
-
-
-        // GET: /Profile/GetParticipantResults (для модального окна)
-        [HttpGet]
-        public async Task<IActionResult> GetParticipantResults(int participantId, int olympiadId)
-        {
-            // TODO: Получить результаты участника
-            var results = await GetParticipantResultsFromDb(participantId, olympiadId);
-            return PartialView("_ParticipantResultsModal", results);
-        }
-
-        // GET: /Profile/GetOlympiadParticipants (для сотрудника)
-        [HttpGet]
-        public async Task<IActionResult> GetOlympiadParticipants(int olympiadId)
-        {
-            var participants = await GetOlympiadParticipantsFromDb(olympiadId);
-            return PartialView("_OlympiadParticipantsModal", participants);
-        }
-
-        // POST: /Profile/RequestDeleteOlympiad (для сотрудника)
         [HttpPost]
-        public async Task<IActionResult> RequestDeleteOlympiad(int olympiadId)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteOlympiad(int id)
         {
-            // TODO: Отправить запрос администратору на удаление
-            TempData["SuccessMessage"] = "Запрос на удаление отправлен администратору";
-            return RedirectToAction(nameof(MyOlympiads));
+            var role = User.FindFirstValue(ClaimTypes.Role) ?? "";
+            if (role != "admin")
+            {
+                return Json(new { success = false, message = "Недостаточно прав" });
+            }
+
+            try
+            {
+                var olympiad = await _olympiadRepository.GetOlympiadByIdAsync(id);
+                if (olympiad == null)
+                {
+                    return Json(new { success = false, message = "Олимпиада не найдена" });
+                }
+
+                // TODO: Удаление олимпиады (можно мягкое удаление или каскадное)
+                // _context.Olympiads.Remove(olympiad);
+                // await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = "Олимпиада удалена" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при удалении олимпиады {OlympiadId}", id);
+                return Json(new { success = false, message = "Ошибка при удалении" });
+            }
         }
-        */
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateOlympiadField([FromBody] UpdateOlympiadFieldRequest request)
+        {
+            var role = User.FindFirstValue(ClaimTypes.Role) ?? "";
+            if (role != "admin")
+            {
+                return Json(new { success = false, message = "Недостаточно прав" });
+            }
+
+            try
+            {
+                var olympiad = await _olympiadRepository.GetOlympiadByIdAsync(request.OlympiadId);
+                if (olympiad == null)
+                {
+                    return Json(new { success = false, message = "Олимпиада не найдена" });
+                }
+
+                // Обновляем соответствующее поле
+                switch (request.Field.ToLower())
+                {
+                    case "title":
+                        olympiad.Title = request.Value;
+                        break;
+                    case "description":
+                        olympiad.Description = request.Value;
+                        break;
+                    case "credentials":
+                        olympiad.Credentials = request.Value;
+                        break;
+                    case "status":
+                        olympiad.Status = request.Value;
+                        break;
+                    case "eventstart":
+                        if (DateTime.TryParse(request.Value, out DateTime eventStart))
+                            olympiad.EventStart = eventStart;
+                        else
+                            return Json(new { success = false, message = "Неверный формат даты" });
+                        break;
+                    case "eventend":
+                        if (DateTime.TryParse(request.Value, out DateTime eventEnd))
+                            olympiad.EventEnd = eventEnd;
+                        else
+                            return Json(new { success = false, message = "Неверный формат даты" });
+                        break;
+                    case "registopen":
+                        if (DateTime.TryParse(request.Value, out DateTime registOpen))
+                            olympiad.RegistOpen = registOpen;
+                        else
+                            return Json(new { success = false, message = "Неверный формат даты" });
+                        break;
+                    case "registclosed":
+                        if (DateTime.TryParse(request.Value, out DateTime registClosed))
+                            olympiad.RegistClosed = registClosed;
+                        else
+                            return Json(new { success = false, message = "Неверный формат даты" });
+                        break;
+                    default:
+                        return Json(new { success = false, message = "Неизвестное поле" });
+                }
+
+                await _olympiadRepository.UpdateOlympiadAsync(olympiad);
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка при обновлении поля {Field} олимпиады {OlympiadId}", request.Field, request.OlympiadId);
+                return Json(new { success = false, message = "Произошла ошибка при сохранении" });
+            }
+        }
+
+        // DTO для запроса обновления
+        public class UpdateOlympiadFieldRequest
+        {
+            public int OlympiadId { get; set; }
+            public string Field { get; set; } = string.Empty;
+            public string Value { get; set; } = string.Empty;
+        }
+
         #region Вспомогательные методы
 
         private async Task<UserProfileViewModel> GetUserProfile()

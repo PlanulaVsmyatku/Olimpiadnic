@@ -51,7 +51,7 @@
                             @if (!isAdmin)
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark" asp-controller="Olympiad" asp-action="MyOlympiads">
+                                    <a class="nav-link text-dark" asp-controller="Profile" asp-action="MyOlympiads">
                                         <i class="fas fa-trophy me-1"></i>Мои олимпиады
                                     </a>
                                 </li>
@@ -64,15 +64,13 @@
                                 </a>
                             </li>
 
-                            @if (User.Identity.IsAuthenticated)
-                            {
-                                <!-- Временная отладка -->
-                                <div class="alert alert-info small position-fixed bottom-0 end-0 m-3" style="z-index: 9999; opacity: 0.8;">
-                                    <strong>Debug:</strong><br>
-                                    Role: @(User.FindFirst(ClaimTypes.Role)?.Value ?? "не найдена")<br>
-                                    Name: @User.Identity.Name
-                                </div>
-                            }
+                            <!-- Временная отладка -->
+                            <div class="alert alert-info small position-fixed bottom-0 end-0 m-3" style="z-index: 9999; opacity: 0.8;">
+                                <strong>Debug:</strong><br>
+                                Role: @(User.FindFirst(ClaimTypes.Role)?.Value ?? "не найдена")<br>
+                                Name: @User.Identity.Name
+                            </div>
+                            
 
                             @if (isStaff)
                             {
@@ -166,8 +164,9 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <div id="global-toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 999999; display: flex; flex-direction: column; gap: 10px;"></div>
     
     @await RenderSectionAsync("Scripts", required: false)
-    <div id="global-toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 999999; display: flex; flex-direction: column; gap: 10px;"></div>
 </body>
 </html>

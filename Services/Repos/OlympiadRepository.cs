@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Olimpiadnic.Data;
 using Olimpiadnic.Entities;
+using Olimpiadnic.Models.MyOlympiads;
 using Olimpiadnic.Models.OlympiadModels;
 namespace Olimpiadnic.Services.Repos
 {
@@ -176,6 +177,12 @@ namespace Olimpiadnic.Services.Repos
             return await _context.Questions
                 .Where(q => q.OlympId == olympId && q.IsActual)
                 .CountAsync();
+        }
+
+        public async Task UpdateOlympiadAsync(Olympiad olympiad)
+        {
+            _context.Olympiads.Update(olympiad);
+            await _context.SaveChangesAsync();
         }
 
         #endregion
@@ -1012,6 +1019,312 @@ namespace Olimpiadnic.Services.Repos
 
         #endregion
 
+
+        #region Мои олимпиады
+
+        /// <summary>
+        /// Получение олимпиад участника с результатами
+        /// </summary>
+        public async Task<MyOlympiadsPagedResult<ParticipantOlympiadViewModel>> GetParticipantOlympiadsAsync(
+            int userId,
+            MyOlympiadsFilterViewModel? filter,
+            int pageNumber,
+            int pageSize = 6)
+        {
+            // Получаем все участия пользователя
+            var query = _context.OlympiadParticipants
+                .Include(p => p.Olymp)
+                .Include(p => p.OlympiadResults)
+                .Where(p => p.UserId == userId);
+
+            // Применяем фильтры по олимпиаде
+            if (filter != null)
+            {
+                // Фильтр по названию
+                if (!string.IsNullOrWhiteSpace(filter.SearchTitle))
+                {
+                    query = query.Where(p => p.Olymp.Title.Contains(filter.SearchTitle));
+                }
+
+                // Фильтр по дате начала
+                if (filter.StartDateFrom.HasValue)
+                {
+                    query = query.Where(p => p.Olymp.EventStart >= filter.StartDateFrom.Value);
+                }
+                if (filter.StartDateTo.HasValue)
+                {
+                    query = query.Where(p => p.Olymp.EventStart <= filter.StartDateTo.Value);
+                }
+
+                // Фильтр по дате окончания
+                if (filter.EndDateFrom.HasValue)
+                {
+                    query = query.Where(p => p.Olymp.EventEnd >= filter.EndDateFrom.Value);
+                }
+                if (filter.EndDateTo.HasValue)
+                {
+                    query = query.Where(p => p.Olymp.EventEnd <= filter.EndDateTo.Value);
+                }
+
+                // Фильтр по статусу завершения
+                if (filter.OnlyCompleted)
+                {
+                    query = query.Where(p => p.Status == "completed");
+                }
+                else if (filter.OnlyRegistered)
+                {
+                    query = query.Where(p => p.Status == "registered");
+                }
+            }
+
+            // Сортировка: сначала активные (не завершённые), потом завершённые
+            var orderedQuery = query.OrderBy(p => p.Status == "completed" ? 1 : 0)
+                                   .ThenBy(p => p.Olymp.EventStart);
+
+            var totalCount = await orderedQuery.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+            if (pageNumber < 1) pageNumber = 1;
+            if (pageNumber > totalPages && totalPages > 0) pageNumber = totalPages;
+
+            var items = await orderedQuery
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(p => new ParticipantOlympiadViewModel
+                {
+                    OlympiadId = p.Olymp.OlympId,
+                    Title = p.Olymp.Title,
+                    ImageUrl = p.Olymp.ImageUrl ?? "/images/default-olympiad.jpg",
+                    Description = p.Olymp.Description ?? string.Empty,
+                    EventStart = p.Olymp.EventStart,
+                    EventEnd = p.Olymp.EventEnd,
+                    RegistOpen = p.Olymp.RegistOpen,
+                    RegistClosed = p.Olymp.RegistClosed,
+                    UserTotalScore = p.OlympiadResults.FirstOrDefault() != null
+                        ? p.OlympiadResults.FirstOrDefault()!.TotalScore
+                        : null,
+                    MaxPossibleScore = 0, // Будет заполнено позже
+                    IsCompleted = p.Status == "completed",
+                    IsRegistered = p.Status == "registered",
+                    CompletedAt = p.CompletedAt
+                })
+                .ToListAsync();
+
+            // Заполняем MaxPossibleScore для каждого элемента
+            foreach (var item in items)
+            {
+                item.MaxPossibleScore = await CalculateTotalMaxScoreForParticipantOlympiadAsync(item.OlympiadId);
+            }
+
+            return new MyOlympiadsPagedResult<ParticipantOlympiadViewModel>
+            {
+                Items = items,
+                CurrentPage = pageNumber,
+                TotalPages = totalPages,
+                TotalCount = totalCount,
+                PageSize = pageSize,
+                Filter = filter
+            };
+        }
+
+        /// <summary>
+        /// Получение максимального балла для олимпиады участника
+        /// </summary>
+        private async Task<int> CalculateTotalMaxScoreForParticipantOlympiadAsync(int olympiadId)
+        {
+            var questions = await _context.Questions
+                .Where(q => q.OlympId == olympiadId && q.IsActual)
+                .ToListAsync();
+
+            int total = 0;
+            foreach (var question in questions)
+            {
+                if (question.Type.StartsWith("auto"))
+                {
+                    total += 1; // auto вопросы дают 1 балл
+                }
+                else if (question.Type == "manual")
+                {
+                    var config = await _context.ManualQuestionsConfigs
+                        .FirstOrDefaultAsync(m => m.QuestId == question.QuestId);
+                    total += config?.MaxScore ?? 0;
+                }
+            }
+            return total;
+        }
+
+        /// <summary>
+        /// Получение олимпиад сотрудника (автор или проверяющий)
+        /// </summary>
+        public async Task<MyOlympiadsPagedResult<StaffOlympiadViewModel>> GetStaffOlympiadsAsync(
+            int userId,
+            MyOlympiadsFilterViewModel? filter,
+            int pageNumber,
+            int pageSize = 6)
+        {
+            // Получаем олимпиады, где пользователь является автором или проверяющим
+            var query = _context.OlympStaffs
+                .Include(s => s.Olymp)
+                .Where(s => s.UserId == userId)
+                .Select(s => new
+                {
+                    Staff = s,
+                    Olympiad = s.Olymp,
+                    UncheckedCount = _context.SubmissionItems
+                        .Include(si => si.Results)
+                            .ThenInclude(r => r.Participant)
+                        .Include(si => si.QuestSnapshot)
+                        .Where(si => si.QuestSnapshot.OlympSnap.OriginalOlympId == s.Olymp.OlympId
+                            && si.Type == "manual"
+                            && si.ManualSubmissionResult != null
+                            && si.ManualSubmissionResult.ScoreValue == null)
+                        .CountAsync().Result,
+                    ParticipantsCount = _context.OlympiadParticipants
+                        .Count(p => p.OlympId == s.Olymp.OlympId)
+                });
+
+            // Применяем фильтры
+            if (filter != null)
+            {
+                if (!string.IsNullOrWhiteSpace(filter.SearchTitle))
+                {
+                    query = query.Where(s => s.Olympiad.Title.Contains(filter.SearchTitle));
+                }
+                if (filter.StartDateFrom.HasValue)
+                {
+                    query = query.Where(s => s.Olympiad.EventStart >= filter.StartDateFrom.Value);
+                }
+                if (filter.StartDateTo.HasValue)
+                {
+                    query = query.Where(s => s.Olympiad.EventStart <= filter.StartDateTo.Value);
+                }
+                if (filter.EndDateFrom.HasValue)
+                {
+                    query = query.Where(s => s.Olympiad.EventEnd >= filter.EndDateFrom.Value);
+                }
+                if (filter.EndDateTo.HasValue)
+                {
+                    query = query.Where(s => s.Olympiad.EventEnd <= filter.EndDateTo.Value);
+                }
+            }
+
+            var totalCount = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+            if (pageNumber < 1) pageNumber = 1;
+            if (pageNumber > totalPages && totalPages > 0) pageNumber = totalPages;
+
+            var itemsData = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(s => new
+                {
+                    s.Olympiad,
+                    s.Staff.OlimpRole,
+                    s.UncheckedCount,
+                    s.ParticipantsCount
+                })
+                .ToListAsync();
+
+            var items = itemsData.Select(s => new StaffOlympiadViewModel
+            {
+                OlympiadId = s.Olympiad.OlympId,
+                Title = s.Olympiad.Title,
+                ImageUrl = s.Olympiad.ImageUrl ?? "/images/default-olympiad.jpg",
+                Description = s.Olympiad.Description ?? string.Empty,
+                EventStart = s.Olympiad.EventStart,
+                EventEnd = s.Olympiad.EventEnd,
+                RegistOpen = s.Olympiad.RegistOpen,
+                RegistClosed = s.Olympiad.RegistClosed,
+                IsAuthor = s.OlimpRole == "author",
+                IsReviewer = s.OlimpRole == "reviewer" || s.OlimpRole == "moderator",
+                UncheckedManualAnswers = s.UncheckedCount,
+                TotalParticipants = s.ParticipantsCount
+            }).ToList();
+
+            return new MyOlympiadsPagedResult<StaffOlympiadViewModel>
+            {
+                Items = items,
+                CurrentPage = pageNumber,
+                TotalPages = totalPages,
+                TotalCount = totalCount,
+                PageSize = pageSize,
+                Filter = filter
+            };
+        }
+
+        /// <summary>
+        /// Получение всех олимпиад для администратора
+        /// </summary>
+        public async Task<MyOlympiadsPagedResult<AdminOlympiadViewModel>> GetAllOlympiadsForAdminAsync(
+            MyOlympiadsFilterViewModel? filter,
+            int pageNumber,
+            int pageSize = 10)
+        {
+            var query = _context.Olympiads.AsQueryable();
+
+            // Применяем фильтры
+            if (filter != null)
+            {
+                if (!string.IsNullOrWhiteSpace(filter.SearchTitle))
+                {
+                    query = query.Where(o => o.Title.Contains(filter.SearchTitle));
+                }
+                if (filter.StartDateFrom.HasValue)
+                {
+                    query = query.Where(o => o.EventStart >= filter.StartDateFrom.Value);
+                }
+                if (filter.StartDateTo.HasValue)
+                {
+                    query = query.Where(o => o.EventStart <= filter.StartDateTo.Value);
+                }
+                if (filter.EndDateFrom.HasValue)
+                {
+                    query = query.Where(o => o.EventEnd >= filter.EndDateFrom.Value);
+                }
+                if (filter.EndDateTo.HasValue)
+                {
+                    query = query.Where(o => o.EventEnd <= filter.EndDateTo.Value);
+                }
+            }
+
+            var totalCount = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+            if (pageNumber < 1) pageNumber = 1;
+            if (pageNumber > totalPages && totalPages > 0) pageNumber = totalPages;
+
+            var items = await query
+                .OrderByDescending(o => o.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(o => new AdminOlympiadViewModel
+                {
+                    OlympiadId = o.OlympId,
+                    Title = o.Title,
+                    ImageUrl = o.ImageUrl ?? string.Empty,
+                    Description = o.Description ?? string.Empty,
+                    Credentials = o.Credentials ?? string.Empty,
+                    Status = o.Status,
+                    EventStart = o.EventStart,
+                    EventEnd = o.EventEnd,
+                    RegistOpen = o.RegistOpen,
+                    RegistClosed = o.RegistClosed,
+                    CreatedAt = o.CreatedAt,
+                    //QuestionsCount = _context.Questions.Count(q => q.OlympId == o.OlympId && q.IsActual),
+                    //ParticipantsCount = _context.OlympiadParticipants.Count(p => p.OlympId == o.OlympId)
+                })
+                .ToListAsync();
+
+            return new MyOlympiadsPagedResult<AdminOlympiadViewModel>
+            {
+                Items = items,
+                CurrentPage = pageNumber,
+                TotalPages = totalPages,
+                TotalCount = totalCount,
+                PageSize = pageSize,
+                Filter = filter
+            };
+        }
+
+        #endregion
 
     }
 }
