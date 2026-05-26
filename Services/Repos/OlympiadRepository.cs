@@ -1526,19 +1526,16 @@ namespace Olimpiadnic.Services.Repos
             var query = _context.OlympStaffs
                 .Include(s => s.Olymp)
                 .Where(s => s.UserId == userId)
-                .Select(s => new
+                .Select(s => new StaffOlympiadQueryDto
                 {
-                    Staff = s,
                     Olympiad = s.Olymp,
+                    OlimpRole = s.OlimpRole,
                     UncheckedCount = _context.SubmissionItems
-                        .Include(si => si.Results)
-                            .ThenInclude(r => r.Participant)
-                        .Include(si => si.QuestSnapshot)
                         .Where(si => si.QuestSnapshot.OlympSnap.OriginalOlympId == s.Olymp.OlympId
                             && si.Type == "manual"
                             && si.ManualSubmissionResult != null
                             && si.ManualSubmissionResult.ScoreValue == null)
-                        .CountAsync().Result,
+                        .Count(),
                     ParticipantsCount = _context.OlympiadParticipants
                         .Count(p => p.OlympId == s.Olymp.OlympId)
                 });
@@ -1579,7 +1576,7 @@ namespace Olimpiadnic.Services.Repos
                 .Select(s => new
                 {
                     s.Olympiad,
-                    s.Staff.OlimpRole,
+                    s.OlimpRole,
                     s.UncheckedCount,
                     s.ParticipantsCount
                 })
@@ -1610,6 +1607,15 @@ namespace Olimpiadnic.Services.Repos
                 PageSize = pageSize,
                 Filter = filter
             };
+        }
+
+        // DTO для промежуточных данных
+        private class StaffOlympiadQueryDto
+        {
+            public Olympiad Olympiad { get; set; } = null!;
+            public string OlimpRole { get; set; } = string.Empty;
+            public int UncheckedCount { get; set; }
+            public int ParticipantsCount { get; set; }
         }
 
         /// <summary>
