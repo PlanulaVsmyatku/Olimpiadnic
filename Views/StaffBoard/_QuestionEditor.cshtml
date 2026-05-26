@@ -1,0 +1,102 @@
+@using Olimpiadnic.Models.RoleModels
+@model QuestionEditorViewModel
+
+<div class="question-card" data-question-id="@Model.TempId">
+    <div class="question-header">
+        <div class="d-flex align-items-center gap-3">
+            <span class="fw-bold question-number-display">Вопрос @Model.OrderNumber</span>
+            @{
+                var badgeClass = Model.Type == "manual" ? "badge-manual" : (Model.Type == "auto-radio" ? "badge-radio" : "badge-checkbox");
+                var badgeIcon = Model.Type == "manual" ? "fa-pen" : (Model.Type == "auto-radio" ? "fa-dot-circle" : "fa-check-square");
+                var badgeText = Model.Type == "manual" ? "Развёрнутый ответ" : (Model.Type == "auto-radio" ? "Одиночный выбор" : "Множественный выбор");
+            }
+            <div class="question-type-badge @badgeClass">
+                <i class="fas @badgeIcon me-1"></i>
+                @badgeText
+            </div>
+        </div>
+        <button type="button" class="remove-question-btn" onclick="window.removeCurrentQuestion()">
+            <i class="fas fa-trash"></i> Удалить вопрос
+        </button>
+    </div>
+
+    <!-- Текст вопроса -->
+    <div class="mb-3">
+        <label class="form-label fw-semibold">Текст вопроса *</label>
+        <textarea class="form-control question-description" rows="3" placeholder="Введите текст вопроса...">@Model.Description</textarea>
+    </div>
+
+    <!-- Тип вопроса -->
+    <div class="mb-3">
+        <label class="form-label fw-semibold">Тип вопроса</label>
+        <select class="form-select question-type">
+            <option value="manual" selected="@(Model.Type == "manual")">Развёрнутый ответ</option>
+            <option value="auto-radio" selected="@(Model.Type == "auto-radio")">Тестовый (один правильный ответ)</option>
+            <option value="auto-checkbox" selected="@(Model.Type == "auto-checkbox")">Тестовый (несколько правильных ответов)</option>
+        </select>
+    </div>
+
+    <!-- Поля для auto-вопросов -->
+    <div class="auto-fields" style="display: @(Model.Type.StartsWith("auto") ? "block" : "none")">
+        <label class="form-label fw-semibold">Варианты ответов</label>
+        <div class="options-container">
+            @foreach (var opt in Model.Options.OrderBy(o => o.SortOrder))
+            {
+                <div class="option-item d-flex align-items-center gap-2 mb-2" data-option-id="@opt.TempId">
+                    <input type="checkbox" class="option-correct" @(opt.IsCorrect ? "checked" : "")>
+                    <input type="text" class="form-control option-text-input" placeholder="Текст варианта ответа" value="@opt.OptionText" style="flex: 1;">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.option-item').remove(); window.triggerSave()">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            }
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="window.addOption(@Model.TempId)">
+            <i class="fas fa-plus me-1"></i> Добавить вариант
+        </button>
+    </div>
+
+    <!-- Поля для manual-вопросов -->
+    <div class="manual-fields" style="display: @(Model.Type == "manual" ? "block" : "none")">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Максимальный балл *</label>
+                <input type="number" class="form-control question-maxscore" value="@(Model.MaxScore ?? 10)" min="1" max="100">
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-semibold">Эталонный ответ</label>
+                <textarea class="form-control question-modelanswer" rows="4" placeholder="Опишите ожидаемый ответ, ключевые моменты для проверки...">@Model.ModelAnswer</textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Вложения -->
+    <div class="mt-3">
+        <label class="form-label fw-semibold">Изображения к вопросу</label>
+        <div class="attachments-container">
+            @foreach (var att in Model.Attachments.OrderBy(a => a.SortOrder))
+            {
+                <div class="attachment-item d-flex align-items-center gap-2 mb-2" data-attachment-id="@att.TempId">
+                    <input type="text" class="form-control form-control-sm attachment-url" placeholder="URL изображения" value="@att.ImageUrl">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.attachment-item').remove(); window.triggerSave()">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            }
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="window.addAttachment(@Model.TempId)">
+            <i class="fas fa-image me-1"></i> Добавить изображение
+        </button>
+    </div>
+</div>
+
+<script>
+    // Находим triggerSave в родительском окне
+    window.triggerSave = function() {
+        if (window.parent && window.parent.triggerSave) {
+            window.parent.triggerSave();
+        } else if (typeof triggerSave === 'function') {
+            triggerSave();
+        }
+    };
+</script>

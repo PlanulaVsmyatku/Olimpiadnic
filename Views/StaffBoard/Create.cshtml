@@ -1,0 +1,528 @@
+@using System.Security.Claims
+@using Olimpiadnic.Models.RoleModels
+@model CreateOlympiadViewModel
+
+@{
+    ViewData["Title"] = Model.IsEditMode ? "Редактирование олимпиады" : "Создание олимпиады";
+    Layout = "_ProfileLayout";
+}
+
+@section AdditionalStyles {
+    <link rel="stylesheet" href="~/css/StaffBoardStyles.css" />
+}
+
+<div class="row">
+    <!-- Левая панель - навигация по вопросам -->
+    <div class="col-md-3">
+        <div class="questions-sidebar">
+            <div class="section-title">
+                <i class="fas fa-list"></i>
+                <span>Вопросы</span>
+                <span class="badge bg-secondary ms-2" id="questionsCount">0</span>
+            </div>
+            <div id="questionsNavList">
+                <!-- Загружается через JS -->
+            </div>
+            <button type="button" class="add-question-btn" id="addQuestionBtn">
+                <i class="fas fa-plus me-2"></i>Добавить вопрос
+            </button>
+        </div>
+    </div>
+
+    <!-- Правая панель - форма -->
+    <div class="col-md-9">
+        <form id="olympiadForm">
+            @Html.AntiForgeryToken()
+
+            <!-- Основная информация -->
+            <div class="form-section">
+                <div class="section-title">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Основная информация</span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Название олимпиады *</label>
+                        <input type="text" id="Title" class="form-control" value="@Model.Title" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Описание *</label>
+                        <textarea id="Description" class="form-control" rows="4">@Model.Description</textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Требования к участникам</label>
+                        <textarea id="Credentials" class="form-control" rows="2">@Model.Credentials</textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">URL изображения</label>
+                        <input type="text" id="ImageUrl" class="form-control" value="@Model.ImageUrl" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Даты -->
+            <div class="form-section">
+                <div class="section-title">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Даты проведения</span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Начало регистрации *</label>
+                        <input type="datetime-local" id="RegistOpen" class="form-control" value="@Model.RegistOpen.ToString("yyyy-MM-ddTHH:mm")" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Окончание регистрации *</label>
+                        <input type="datetime-local" id="RegistClosed" class="form-control" value="@Model.RegistClosed.ToString("yyyy-MM-ddTHH:mm")" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Начало олимпиады *</label>
+                        <input type="datetime-local" id="EventStart" class="form-control" value="@Model.EventStart.ToString("yyyy-MM-ddTHH:mm")" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Окончание олимпиады *</label>
+                        <input type="datetime-local" id="EventEnd" class="form-control" value="@Model.EventEnd.ToString("yyyy-MM-ddTHH:mm")" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Текущий вопрос -->
+            <div id="currentQuestionContainer">
+                @if (Model.Questions.Any())
+                {
+                    <partial name="_QuestionEditor" model="Model.Questions.First()" />
+                }
+            </div>
+
+            <!-- Кнопки действий -->
+            <div class="d-flex gap-3 justify-content-end mt-4 mb-5">
+                <button type="button" class="btn btn-primary" id="publishBtn">
+                    <i class="fas fa-check-circle me-2"></i>@(Model.IsEditMode ? "Сохранить изменения" : "Опубликовать олимпиаду")
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Индикатор сохранения -->
+<div id="saveIndicator" class="auto-save-indicator">
+    <i class="fas fa-save me-2"></i>Сохранено
+</div>
+
+@section ProfileScripts {
+    <script>
+        let saveTimer = null;
+        let isSaving = false;
+        let currentQuestionTempId = @(Model.Questions.FirstOrDefault()?.TempId ?? 0);
+
+        // ==================== Сохранение основной информации ====================
+        async function saveOlympiadInfo() {
+            if (isSaving) return;
+
+            const data = {
+                title: document.getElementById('Title').value,
+                description: document.getElementById('Description').value,
+                credentials: document.getElementById('Credentials').value,
+                imageUrl: document.getElementById('ImageUrl').value,
+                registOpen: document.getElementById('RegistOpen').value,
+                registClosed: document.getElementById('RegistClosed').value,
+                eventStart: document.getElementById('EventStart').value,
+                eventEnd: document.getElementById('EventEnd').value
+            };
+
+            try {
+                isSaving = true;
+                const response = await fetch('/StaffBoard/SaveOlympiadInfo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    showSaveIndicator();
+                }
+            } catch (error) {
+                console.error('Error saving olympiad info:', error);
+            } finally {
+                isSaving = false;
+            }
+        }
+
+        // ==================== Сохранение текущего вопроса ====================
+                async function saveCurrentQuestion() {
+            const card = document.querySelector('.question-card');
+            if (!card) return;
+
+            const tempId = parseInt(card.dataset.questionId);
+            const description = card.querySelector('.question-description')?.value || '';
+            const type = card.querySelector('.question-type')?.value || 'manual';
+
+            const questionData = {
+                tempId: tempId,
+                description: description,
+                type: type
+            };
+
+            if (type === 'manual') {
+                questionData.maxScore = parseInt(card.querySelector('.question-maxscore')?.value) || 10;
+                questionData.modelAnswer = card.querySelector('.question-modelanswer')?.value || '';
+            } else {
+                const options = [];
+                card.querySelectorAll('.option-item').forEach((opt, idx) => {
+                    options.push({
+                        tempId: parseInt(opt.dataset.optionId) || idx + 1,
+                        optionText: opt.querySelector('.option-text-input')?.value || '',
+                        isCorrect: opt.querySelector('.option-correct')?.checked || false,
+                        sortOrder: idx + 1
+                    });
+                });
+                questionData.options = options;
+            }
+
+            const attachments = [];
+            card.querySelectorAll('.attachment-item').forEach((att, idx) => {
+                attachments.push({
+                    tempId: parseInt(att.dataset.attachmentId) || idx + 1,
+                    imageUrl: att.querySelector('.attachment-url')?.value || '',
+                    sortOrder: idx + 1
+                });
+            });
+            questionData.attachments = attachments;
+
+            // ЭТО БЛОК ДЛЯ ОТЛАДКИ
+            console.log('Sending question data:', JSON.stringify(questionData, null, 2));
+
+            try {
+                const response = await fetch('/StaffBoard/SaveCurrentQuestion', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify(questionData)
+                });
+
+                // ПРОВЕРКА СТАТУСА
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Server error:', response.status, errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const data = await response.json();
+                console.log('Response:', data);
+
+                if (data.success) {
+                    showSaveIndicator();
+                    updateNavItemStatus(tempId, description && description.length > 10);
+                } else {
+                    console.error('Save failed:', data.message);
+                }
+            } catch (error) {
+                console.error('Error saving question:', error);
+            }
+        }
+
+        function triggerSave() {
+            if (saveTimer) clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => {
+                saveOlympiadInfo();
+                saveCurrentQuestion();
+            }, 1500);
+        }
+
+        function showSaveIndicator() {
+            const indicator = document.getElementById('saveIndicator');
+            indicator.style.opacity = '1';
+            setTimeout(() => {
+                indicator.style.opacity = '0';
+            }, 1500);
+        }
+
+        // ==================== Навигация ====================
+        async function loadNavigation() {
+            try {
+                const response = await fetch('/StaffBoard/GetNavigationData');
+                const data = await response.json();
+
+                if (data.success) {
+                    renderNavigation(data);
+                }
+            } catch (error) {
+                console.error('Error loading navigation:', error);
+            }
+        }
+
+        function renderNavigation(data) {
+            const navList = document.getElementById('questionsNavList');
+            const questionsCount = document.getElementById('questionsCount');
+
+            let html = '';
+            data.questions.forEach(q => {
+                const savedClass = q.isSaved ? 'saved' : '';
+                const activeClass = q.isCurrent ? 'active' : '';
+                html += `
+                    <div class="question-nav-item ${savedClass} ${activeClass}" data-question-id="${q.id}" onclick="navigateToQuestion(${q.number - 1})">
+                        <span class="question-nav-number">${q.number}</span>
+                        <span class="question-nav-title">${escapeHtml(q.shortTitle || 'Новый вопрос')}</span>
+                        <span class="question-nav-status">
+                            ${q.isSaved ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-circle text-muted" style="font-size: 8px;"></i>'}
+                        </span>
+                    </div>
+                `;
+            });
+
+            navList.innerHTML = html;
+            questionsCount.textContent = data.totalQuestions;
+        }
+
+        function updateNavItemStatus(questionId, isSaved) {
+            const navItem = document.querySelector(`.question-nav-item[data-question-id="${questionId}"]`);
+            if (navItem) {
+                if (isSaved) {
+                    navItem.classList.add('saved');
+                    navItem.querySelector('.question-nav-status').innerHTML = '<i class="fas fa-check-circle text-success"></i>';
+                } else {
+                    navItem.classList.remove('saved');
+                    navItem.querySelector('.question-nav-status').innerHTML = '<i class="fas fa-circle text-muted" style="font-size: 8px;"></i>';
+                }
+            }
+        }
+
+        async function navigateToQuestion(index) {
+            // Сначала сохраняем текущий вопрос
+            await saveCurrentQuestion();
+
+            try {
+                const response = await fetch(`/StaffBoard/GetQuestion?index=${index}`);
+                const html = await response.text();
+
+                document.getElementById('currentQuestionContainer').innerHTML = html;
+
+                // Обновляем currentQuestionTempId
+                const newCard = document.querySelector('.question-card');
+                if (newCard) {
+                    currentQuestionTempId = parseInt(newCard.dataset.questionId);
+                }
+
+                // Обновляем навигацию
+                await loadNavigation();
+
+                // Привязываем обработчики
+                attachEventHandlers();
+
+            } catch (error) {
+                console.error('Error navigating:', error);
+            }
+        }
+
+        // ==================== Управление вопросами ====================
+        async function addQuestion() {
+            try {
+                const response = await fetch('/StaffBoard/AddQuestion', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    }
+                });
+
+                const html = await response.text();
+                document.getElementById('currentQuestionContainer').innerHTML = html;
+
+                // Обновляем навигацию
+                await loadNavigation();
+
+                // Привязываем обработчики
+                attachEventHandlers();
+
+                // Скроллим к новому вопросу
+                const newCard = document.querySelector('.question-card');
+                if (newCard) {
+                    newCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+
+            } catch (error) {
+                console.error('Error adding question:', error);
+            }
+        }
+
+        window.removeCurrentQuestion = async function() {
+            const card = document.querySelector('.question-card');
+            if (!card) return;
+
+            const tempId = parseInt(card.dataset.questionId);
+
+            if (!confirm('Удалить этот вопрос?')) return;
+
+            try {
+                const response = await fetch('/StaffBoard/RemoveQuestion', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({ tempId: tempId })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Перезагружаем навигацию и первый вопрос
+                    await loadNavigation();
+                    await navigateToQuestion(0);
+                }
+            } catch (error) {
+                console.error('Error removing question:', error);
+            }
+        };
+
+        // ==================== Управление вариантами ====================
+        window.addOption = async function(questionTempId) {
+            const card = document.querySelector('.question-card');
+            const optionsContainer = card.querySelector('.options-container');
+            const newId = Date.now();
+
+            const newOptionHtml = `
+                <div class="option-item d-flex align-items-center gap-2 mb-2" data-option-id="${newId}">
+                    <input type="checkbox" class="option-correct">
+                    <input type="text" class="form-control option-text-input" placeholder="Текст варианта ответа" style="flex: 1;" oninput="triggerSave()">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.option-item').remove(); triggerSave()">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            optionsContainer.insertAdjacentHTML('beforeend', newOptionHtml);
+            triggerSave();
+        };
+
+        window.addAttachment = async function(questionTempId) {
+            const card = document.querySelector('.question-card');
+            const attachmentsContainer = card.querySelector('.attachments-container');
+            const newId = Date.now();
+
+            const newAttachmentHtml = `
+                <div class="attachment-item d-flex align-items-center gap-2 mb-2" data-attachment-id="${newId}">
+                    <input type="text" class="form-control form-control-sm attachment-url" placeholder="URL изображения" oninput="triggerSave()">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.attachment-item').remove(); triggerSave()">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            attachmentsContainer.insertAdjacentHTML('beforeend', newAttachmentHtml);
+            triggerSave();
+        };
+
+        // ==================== Обработка типа вопроса ====================
+        function handleQuestionTypeChange(select) {
+            const card = select.closest('.question-card');
+            const type = select.value;
+            const autoFields = card.querySelector('.auto-fields');
+            const manualFields = card.querySelector('.manual-fields');
+            const badge = card.querySelector('.question-type-badge');
+
+            if (type.startsWith('auto')) {
+                if (autoFields) autoFields.style.display = 'block';
+                if (manualFields) manualFields.style.display = 'none';
+                if (badge) {
+                    badge.className = `question-type-badge ${type === 'auto-radio' ? 'badge-radio' : 'badge-checkbox'}`;
+                    badge.innerHTML = `<i class="fas ${type === 'auto-radio' ? 'fa-dot-circle' : 'fa-check-square'} me-1"></i>${type === 'auto-radio' ? 'Одиночный выбор' : 'Множественный выбор'}`;
+                }
+            } else {
+                if (autoFields) autoFields.style.display = 'none';
+                if (manualFields) manualFields.style.display = 'block';
+                if (badge) {
+                    badge.className = 'question-type-badge badge-manual';
+                    badge.innerHTML = '<i class="fas fa-pen me-1"></i>Развёрнутый ответ';
+                }
+            }
+
+            triggerSave();
+        }
+
+        // ==================== Публикация ====================
+        async function publishOlympiad() {
+            // Сначала сохраняем текущий вопрос
+            await saveCurrentQuestion();
+            await saveOlympiadInfo();
+
+            try {
+                const response = await fetch('/StaffBoard/PublishOlympiad', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    }
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert(data.message);
+                    window.location.href = '/Profile/MyOlympiads';
+                } else {
+                    alert(data.message || 'Ошибка при сохранении');
+                }
+            } catch (error) {
+                console.error('Error publishing:', error);
+                alert('Произошла ошибка при сохранении');
+            }
+        }
+
+        // ==================== Вспомогательные функции ====================
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        function attachEventHandlers() {
+            // Обработчики для полей вопроса
+            const card = document.querySelector('.question-card');
+            if (card) {
+                // Текст вопроса
+                const description = card.querySelector('.question-description');
+                if (description) description.addEventListener('input', triggerSave);
+
+                // Тип вопроса
+                const typeSelect = card.querySelector('.question-type');
+                if (typeSelect) {
+                    typeSelect.removeEventListener('change', () => handleQuestionTypeChange(typeSelect));
+                    typeSelect.addEventListener('change', () => handleQuestionTypeChange(typeSelect));
+                }
+
+                // Поля manual
+                const maxScore = card.querySelector('.question-maxscore');
+                if (maxScore) maxScore.addEventListener('input', triggerSave);
+
+                const modelAnswer = card.querySelector('.question-modelanswer');
+                if (modelAnswer) modelAnswer.addEventListener('input', triggerSave);
+            }
+        }
+
+        // ==================== Инициализация ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            attachEventHandlers();
+            loadNavigation();
+
+            // Кнопки
+            document.getElementById('addQuestionBtn').addEventListener('click', addQuestion);
+            document.getElementById('publishBtn').addEventListener('click', publishOlympiad);
+
+            // Автосохранение основных полей
+            const mainFields = ['Title', 'Description', 'Credentials', 'ImageUrl', 'RegistOpen', 'RegistClosed', 'EventStart', 'EventEnd'];
+            mainFields.forEach(fieldId => {
+                const el = document.getElementById(fieldId);
+                if (el) {
+                    el.addEventListener('input', triggerSave);
+                    el.addEventListener('change', triggerSave);
+                }
+            });
+        });
+    </script>
+}

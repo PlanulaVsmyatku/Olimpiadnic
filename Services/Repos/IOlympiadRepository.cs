@@ -42,6 +42,24 @@ namespace Olimpiadnic.Services.Repos
         /// Закрепление изменений таблицы олимпиад
         /// </summary>
         Task UpdateOlympiadAsync(Olympiad olympiad);
+
+        #region Создание/Редактирование олимпиад
+        /// <summary>
+        /// Создание новой олимпиады с вопросами
+        /// </summary>
+        Task<int> CreateOlympiadAsync(CreateOlympiadViewModel model, int creatorUserId);
+
+        /// <summary>
+        /// Обновление существующей олимпиады
+        /// </summary>
+        Task<bool> UpdateOlympiadAsync(CreateOlympiadViewModel model, int editorUserId);
+
+        /// <summary>
+        /// Получение олимпиады для редактирования
+        /// </summary>
+        Task<CreateOlympiadViewModel?> GetOlympiadForEditAsync(int olympiadId);
+        #endregion
+
         #endregion
 
         #region Участники

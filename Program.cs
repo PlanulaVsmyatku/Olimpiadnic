@@ -9,7 +9,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Регистрируем наш контекст в контейнере зависимостей
 builder.Services.AddDbContext<AppDbContext>(options =>
-    // Указываем, что используем SQL Server (SSMS) и берем строку из настроек
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add services to the container.
@@ -19,44 +18,35 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDistributedMemoryCache(); // Хранилище сессий в памяти
 builder.Services.AddSession(options =>
 {
-    // Время жизни сессии (30 минут бездействия)
     options.IdleTimeout = TimeSpan.FromMinutes(30);
-
-    // Куки сессии
     options.Cookie.Name = ".Olympiad.Session";
-    options.Cookie.HttpOnly = true; // Защита от XSS
-    options.Cookie.IsEssential = true; // Работает даже без согласия на cookie
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
-
-    // Шифрование данных сессии
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
 builder.Services.AddHttpContextAccessor();
 
 // Добавление кастомных сервисов
-// Добавление сервиса восстановления паролей
 builder.Services.AddScoped<IPasswordRecoveryService, PasswordRecoveryService>();
-// Добавление сервиса инвайт-ссылок
 builder.Services.AddScoped<IInviteService, InviteService>();
-// Добавление сервиса для работы с паролями
 builder.Services.AddScoped<IPasswordService, PasswordService>();
-// Добавление сервиса для работы с БД по олимпиадам
-builder.Services.AddScoped<IOlympiadRepository, OlympiadRepository>();
-// Добавление сервиса для работы с сессиями
-builder.Services.AddScoped<IOlympiadSessionService, OlympiadSessionService>();
 
+builder.Services.AddScoped<IOlympiadRepository, OlympiadRepository>();
+builder.Services.AddScoped<IOlympiadSessionService, OlympiadSessionService>();
+builder.Services.AddScoped<IOlympiadEditorSessionService, OlympiadEditorSessionService>();
 
 // Настройка аутентификации через cookies
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.LoginPath = "/Account/Login";        // Путь к странице входа
-        options.LogoutPath = "/Account/Logout";      // Путь к выходу
-        options.AccessDeniedPath = "/Home/AccessDenied"; // Страница отказа в доступе
-        options.ExpireTimeSpan = TimeSpan.FromDays(7);    // Время жизни cookie
-        options.SlidingExpiration = true;                  // Обновление при активности
-        options.Cookie.HttpOnly = true;                    // Защита от XSS
-        options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Только HTTPS
+        options.LoginPath = "/Account/Login";
+        options.LogoutPath = "/Account/Logout";
+        options.AccessDeniedPath = "/Home/AccessDenied";
+        options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        options.SlidingExpiration = true;
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     });
 
 builder.Services.AddAuthorization(options =>
@@ -73,20 +63,18 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
 app.MapStaticAssets();
 
 app.UseRouting();
 
-app.UseAuthentication();  // Кто это?
-app.UseAuthorization();   // Может ли он это делать?
-app.UseSession();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseSession(); 
 
 app.MapControllerRoute(
     name: "default",
