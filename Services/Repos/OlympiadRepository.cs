@@ -202,11 +202,11 @@ namespace Olimpiadnic.Services.Repos
                     Description = model.Description,
                     Credentials = model.Credentials,
                     Status = "available",
-                    CreatedAt = DateTime.Now,
-                    EventStart = model.EventStart,
-                    EventEnd = model.EventEnd,
-                    RegistOpen = model.RegistOpen,
-                    RegistClosed = model.RegistClosed
+                    CreatedAt = DateTime.UtcNow,
+                    EventStart = model.EventStart.ToUniversalTime(),
+                    EventEnd = model.EventEnd.ToUniversalTime(),
+                    RegistOpen = model.RegistOpen.ToUniversalTime(),
+                    RegistClosed = model.RegistClosed.ToUniversalTime()
                 };
 
                 _context.Olympiads.Add(olympiad);
@@ -218,30 +218,12 @@ namespace Olimpiadnic.Services.Repos
                     OlympId = olympiad.OlympId,
                     UserId = creatorUserId,
                     OlimpRole = "author",
-                    AssignedAt = DateTime.Now
+                    AssignedAt = DateTime.UtcNow
                 };
                 _context.OlympStaffs.Add(olympStaff);
 
-                // 3. Создаём снапшот олимпиады
-                var olympiadSnapshot = new OlympiadSnapshot
-                {
-                    OriginalOlympId = olympiad.OlympId,
-                    Title = olympiad.Title,
-                    ImageUrl = olympiad.ImageUrl,
-                    Description = olympiad.Description,
-                    Credentials = olympiad.Credentials,
-                    Status = olympiad.Status,
-                    EventStart = olympiad.EventStart,
-                    EventEnd = olympiad.EventEnd,
-                    RegistOpen = olympiad.RegistOpen,
-                    RegistClosed = olympiad.RegistClosed,
-                    CreatedAt = olympiad.CreatedAt,
-                    CreatedAtSnap = DateTime.Now
-                };
-                _context.OlympiadSnapshots.Add(olympiadSnapshot);
-                await _context.SaveChangesAsync();
 
-                // 4. Создаём вопросы
+                // 3. Создаём вопросы
                 foreach (var questionVM in model.Questions.OrderBy(q => q.OrderNumber))
                 {
                     var question = new Question
@@ -253,18 +235,6 @@ namespace Olimpiadnic.Services.Repos
                         IsActual = true
                     };
                     _context.Questions.Add(question);
-                    await _context.SaveChangesAsync();
-
-                    // Снапшот вопроса
-                    var questionSnapshot = new QuestionsSnapshot
-                    {
-                        OlympSnapId = olympiadSnapshot.OlympSnapId,
-                        QuestIdOriginal = question.QuestId,
-                        QuestOrderSnapshot = question.QuestionOrder,
-                        QuestionDescSnapshot = question.Description,
-                        QuestionTypeSnapshot = question.Type
-                    };
-                    _context.QuestionsSnapshots.Add(questionSnapshot);
                     await _context.SaveChangesAsync();
 
                     // Обработка в зависимости от типа
@@ -281,15 +251,6 @@ namespace Olimpiadnic.Services.Repos
                             };
                             _context.AutoQuestions.Add(autoQuestion);
 
-                            // Снапшот варианта
-                            var autoSnapshot = new AutoQuestionsSnapshot
-                            {
-                                QuestSnapshotId = questionSnapshot.QuestSnapshotId,
-                                OptionText = opt.OptionText,
-                                IsCorrect = opt.IsCorrect,
-                                SortOrder = opt.SortOrder
-                            };
-                            _context.AutoQuestionsSnapshots.Add(autoSnapshot);
                         }
                     }
                     else if (questionVM.Type == "manual")
@@ -302,34 +263,22 @@ namespace Olimpiadnic.Services.Repos
                         };
                         _context.ManualQuestionsConfigs.Add(manualConfig);
 
-                        // Снапшот конфигурации
-                        var manualSnapshot = new ManualQuestionsConfigSnapshot
-                        {
-                            QuestSnapshotId = questionSnapshot.QuestSnapshotId,
-                            MaxScore = manualConfig.MaxScore,
-                            ModelAnswer = manualConfig.ModelAnswer
-                        };
-                        _context.ManualQuestionsConfigSnapshots.Add(manualSnapshot);
                     }
 
                     // Вложения
                     foreach (var attachment in questionVM.Attachments.OrderBy(a => a.SortOrder))
                     {
-                        var attachmentEntity = new QuestionAttachment
+                        if (!string.IsNullOrWhiteSpace(attachment.ImageUrl))
                         {
-                            QuestId = question.QuestId,
-                            ImageUrl = attachment.ImageUrl ?? string.Empty,
-                            SortOrder = attachment.SortOrder
-                        };
-                        _context.QuestionAttachments.Add(attachmentEntity);
+                            var attachmentEntity = new QuestionAttachment
+                            {
+                                QuestId = question.QuestId,
+                                ImageUrl = attachment.ImageUrl,
+                                SortOrder = attachment.SortOrder
+                            };
+                            _context.QuestionAttachments.Add(attachmentEntity);
 
-                        var attachmentSnapshot = new QuestionAttachmentsSnapshot
-                        {
-                            QuestSnapshotId = questionSnapshot.QuestSnapshotId,
-                            ImageUrl = attachment.ImageUrl ?? string.Empty,
-                            SortOrder = attachment.SortOrder
-                        };
-                        _context.QuestionAttachmentsSnapshots.Add(attachmentSnapshot);
+                        }
                     }
                 }
 
@@ -355,37 +304,138 @@ namespace Olimpiadnic.Services.Repos
 
                 if (olympiad == null) return false;
 
+                // Проверяем права
+                var isAuthor = await _context.OlympStaffs
+                    .AnyAsync(s => s.OlympId == model.OlympiadId && s.UserId == editorUserId && s.OlimpRole == "author");
+
+                var isAdmin = await _context.UserRoles
+                    .AnyAsync(ur => ur.UserId == editorUserId && ur.Role.Name == "admin");
+
+                if (!isAuthor && !isAdmin)
+                    throw new UnauthorizedAccessException("У вас нет прав на редактирование этой олимпиады");
+
                 // Обновляем основные данные
                 olympiad.Title = model.Title;
                 olympiad.ImageUrl = model.ImageUrl;
                 olympiad.Description = model.Description;
                 olympiad.Credentials = model.Credentials;
-                olympiad.EventStart = model.EventStart;
-                olympiad.EventEnd = model.EventEnd;
-                olympiad.RegistOpen = model.RegistOpen;
-                olympiad.RegistClosed = model.RegistClosed;
+                olympiad.EventStart = model.EventStart.ToUniversalTime();
+                olympiad.EventEnd = model.EventEnd.ToUniversalTime();
+                olympiad.RegistOpen = model.RegistOpen.ToUniversalTime();
+                olympiad.RegistClosed = model.RegistClosed.ToUniversalTime();
 
                 _context.Olympiads.Update(olympiad);
 
-                // Обновляем снапшот
-                var snapshot = await _context.OlympiadSnapshots
-                    .FirstOrDefaultAsync(s => s.OriginalOlympId == model.OlympiadId);
-                if (snapshot != null)
+                // Получаем существующие вопросы
+                var existingQuestions = await _context.Questions
+                    .Where(q => q.OlympId == model.OlympiadId && q.IsActual)
+                    .ToListAsync();
+
+                var existingQuestionIds = existingQuestions.Select(q => q.QuestId).ToHashSet();
+                var newQuestionIds = model.Questions.Where(q => q.QuestionId.HasValue).Select(q => q.QuestionId.Value).ToHashSet();
+
+                // Удаляем вопросы, которых нет в новой модели
+                var questionsToDelete = existingQuestions.Where(q => !newQuestionIds.Contains(q.QuestId)).ToList();
+                foreach (var question in questionsToDelete)
                 {
-                    snapshot.Title = model.Title;
-                    snapshot.ImageUrl = model.ImageUrl;
-                    snapshot.Description = model.Description;
-                    snapshot.Credentials = model.Credentials;
-                    snapshot.EventStart = model.EventStart;
-                    snapshot.EventEnd = model.EventEnd;
-                    snapshot.RegistOpen = model.RegistOpen;
-                    snapshot.RegistClosed = model.RegistClosed;
-                    snapshot.CreatedAtSnap = DateTime.Now;
-                    _context.OlympiadSnapshots.Update(snapshot);
+                    question.IsActual = false; // Soft delete
+                    _context.Questions.Update(question);
                 }
 
-                // Здесь нужно добавить логику обновления вопросов
-                // (для простоты опущено, но должно быть реализовано)
+                // Обрабатываем каждый вопрос из модели
+                foreach (var questionVM in model.Questions.OrderBy(q => q.OrderNumber))
+                {
+                    Question question;
+                    bool isNewQuestion = !questionVM.QuestionId.HasValue;
+
+                    if (isNewQuestion)
+                    {
+                        question = new Question
+                        {
+                            OlympId = olympiad.OlympId,
+                            QuestionOrder = questionVM.OrderNumber,
+                            Description = questionVM.Description,
+                            Type = questionVM.Type,
+                            IsActual = true
+                        };
+                        _context.Questions.Add(question);
+                        await _context.SaveChangesAsync();
+                    }
+                    else
+                    {
+                        question = existingQuestions.FirstOrDefault(q => q.QuestId == questionVM.QuestionId);
+                        if (question == null) continue;
+
+                        question.QuestionOrder = questionVM.OrderNumber;
+                        question.Description = questionVM.Description;
+                        question.Type = questionVM.Type;
+                        question.IsActual = true;
+                        _context.Questions.Update(question);
+                    }
+
+                    // Обработка в зависимости от типа
+                    if (questionVM.Type.StartsWith("auto"))
+                    {
+                        // Удаляем старые варианты
+                        var oldOptions = await _context.AutoQuestions
+                            .Where(o => o.QuestId == question.QuestId)
+                            .ToListAsync();
+                        _context.AutoQuestions.RemoveRange(oldOptions);
+
+                        // Добавляем новые
+                        foreach (var opt in questionVM.Options.OrderBy(o => o.SortOrder))
+                        {
+                            var autoQuestion = new AutoQuestion
+                            {
+                                QuestId = question.QuestId,
+                                OptionText = opt.OptionText,
+                                IsCorrect = opt.IsCorrect,
+                                SortOrder = opt.SortOrder
+                            };
+                            _context.AutoQuestions.Add(autoQuestion);
+
+                        }
+                    }
+                    else if (questionVM.Type == "manual")
+                    {
+                        // Удаляем старую конфигурацию
+                        var oldConfig = await _context.ManualQuestionsConfigs
+                            .FirstOrDefaultAsync(m => m.QuestId == question.QuestId);
+                        if (oldConfig != null)
+                            _context.ManualQuestionsConfigs.Remove(oldConfig);
+
+                        // Добавляем новую
+                        var manualConfig = new ManualQuestionsConfig
+                        {
+                            QuestId = question.QuestId,
+                            MaxScore = questionVM.MaxScore ?? 10,
+                            ModelAnswer = questionVM.ModelAnswer
+                        };
+                        _context.ManualQuestionsConfigs.Add(manualConfig);
+
+                    }
+
+                    // Обработка вложений
+                    var oldAttachments = await _context.QuestionAttachments
+                        .Where(a => a.QuestId == question.QuestId)
+                        .ToListAsync();
+                    _context.QuestionAttachments.RemoveRange(oldAttachments);
+
+                    foreach (var attachment in questionVM.Attachments.OrderBy(a => a.SortOrder))
+                    {
+                        if (!string.IsNullOrWhiteSpace(attachment.ImageUrl))
+                        {
+                            var attachmentEntity = new QuestionAttachment
+                            {
+                                QuestId = question.QuestId,
+                                ImageUrl = attachment.ImageUrl,
+                                SortOrder = attachment.SortOrder
+                            };
+                            _context.QuestionAttachments.Add(attachmentEntity);
+
+                        }
+                    }
+                }
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();

@@ -4,6 +4,7 @@ using Olimpiadnic.Data;
 using Olimpiadnic.Models.RoleModels;
 using Olimpiadnic.Services;
 using Olimpiadnic.Services.Repos;
+using Olimpiadnic.Services.Session;
 
 var builder = WebApplication.CreateBuilder(args);
 

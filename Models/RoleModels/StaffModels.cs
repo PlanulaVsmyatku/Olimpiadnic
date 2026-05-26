@@ -17,13 +17,15 @@ namespace Olimpiadnic.Models.RoleModels
         [StringLength(200, MinimumLength = 3, ErrorMessage = "Название должно быть от 3 до 200 символов")]
         public string Title { get; set; } = string.Empty;
 
+        //для URL изображения
         [Display(Name = "Изображение олимпиады")]
         public string? ImageUrl { get; set; }
 
+        /*
+         * на сервере хранятся url изображений а не кодированные изображения
         [Display(Name = "Загрузить изображение")]
-        [JsonIgnore]
         public IFormFile? ImageFile { get; set; }
-
+        */
         [Required(ErrorMessage = "Введите описание олимпиады")]
         [Display(Name = "Описание")]
         [StringLength(5000, MinimumLength = 10, ErrorMessage = "Описание должно быть от 10 до 5000 символов")]
@@ -125,61 +127,8 @@ namespace Olimpiadnic.Models.RoleModels
         public int TempId { get; set; }
         public int? AttachmentId { get; set; }
         public string? ImageUrl { get; set; }
-        [JsonIgnore]
-        public IFormFile? ImageFile { get; set; }
         public int SortOrder { get; set; }
     }
 
-    /// <summary>
-    /// DTO для сохранения черновика в сессии
-    /// </summary>
-    public class OlympiadDraftDto
-    {
-        public int DraftId { get; set; }
-        public int UserId { get; set; }
-        public int? OlympiadId { get; set; }
-        public string Title { get; set; } = string.Empty;
-        public string? ImageUrl { get; set; }
-        public string Description { get; set; } = string.Empty;
-        public string? Credentials { get; set; }
-        public DateTime RegistOpen { get; set; }
-        public DateTime RegistClosed { get; set; }
-        public DateTime EventStart { get; set; }
-        public DateTime EventEnd { get; set; }
-        public string Status { get; set; } = "available";
-        public DateTime LastSaved { get; set; }
-        public List<QuestionDraftDto> Questions { get; set; } = new();
-    }
-
-    public class QuestionDraftDto
-    {
-        public int TempId { get; set; }
-        public int? QuestionId { get; set; }
-        public int OrderNumber { get; set; }
-        public string Description { get; set; } = string.Empty;
-        public string Type { get; set; } = "manual";
-        public bool IsActual { get; set; } = true;
-        public List<AutoQuestionOptionDraftDto> Options { get; set; } = new();
-        public int? MaxScore { get; set; }
-        public string? ModelAnswer { get; set; }
-        public List<QuestionAttachmentDraftDto> Attachments { get; set; } = new();
-    }
-
-    public class AutoQuestionOptionDraftDto
-    {
-        public int TempId { get; set; }
-        public int? OptionId { get; set; }
-        public string OptionText { get; set; } = string.Empty;
-        public bool IsCorrect { get; set; }
-        public int SortOrder { get; set; }
-    }
-
-    public class QuestionAttachmentDraftDto
-    {
-        public int TempId { get; set; }
-        public int? AttachmentId { get; set; }
-        public string? ImageUrl { get; set; }
-        public int SortOrder { get; set; }
-    }
 
 }
