@@ -68,7 +68,14 @@ namespace Olimpiadnic.Services.Repos
         Task<bool> RegisterParticipantAsync(int olympiadId, int userId);
         Task<bool> IsUserRegisteredAsync(int olympiadId, int userId);
         Task UpdateParticipantAsync(OlympiadParticipant participant);
+        /// <summary>
+        /// Получает существующего участника, если нету то создаёт новое участие в олимпиаде
+        /// </summary>
         Task<OlympiadParticipant> GetOrCreateParticipantAsync(int olympiadId, int userId);
+        /// <summary>
+        /// Получает true и существующего участника, если нету то возвращает false, null
+        /// </summary>
+        Task<(bool isParticipantExists, OlympiadParticipant?)> GetParticipantAsync(int olympiadId, int userId);
         #endregion
 
         #region Вопросы (оригиналы)

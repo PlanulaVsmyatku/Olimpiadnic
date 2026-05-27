@@ -1,5 +1,4 @@
-﻿// StaffBoardController.cs - добавляем метод Create
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Olimpiadnic.Data;
@@ -37,23 +36,6 @@ namespace Olimpiadnic.Controllers
 
             if (id.HasValue)
             {
-                // Проверяем, есть ли черновик
-                var draft = await _sessionService.GetSessionAsync(userId);
-                if (draft != null && draft.Questions.Any() && !string.IsNullOrEmpty(draft.Title))
-                {
-                    // Сохраняем ID черновика в TempData для возможного восстановления
-                    TempData["HasDraft"] = true;
-                    TempData["DraftTitle"] = draft.Title;
-                    TempData["DraftQuestionsCount"] = draft.Questions.Count;
-                    TempData["OlympiadIdForEdit"] = id.Value;
-                }
-
-                // Режим редактирования - загружаем из БД
-                var olympiad = await _olympiadRepository.GetOlympiadForEditAsync(id.Value);
-
-                if (olympiad == null)
-                    return NotFound();
-
                 // Проверяем права
                 var isAuthor = await _context.OlympStaffs
                     .AnyAsync(s => s.OlympId == id.Value && s.UserId == userId && s.OlimpRole == "author");
@@ -62,30 +44,118 @@ namespace Olimpiadnic.Controllers
                 if (!isAuthor && !isAdmin)
                     return Forbid();
 
+                // Режим редактирования - загружаем из БД
+                var olympiad = await _olympiadRepository.GetOlympiadForEditAsync(id.Value);
+
+                if (olympiad == null)
+                    return NotFound();
+
                 olympiad.IsEditMode = true;
 
-                // Если есть черновик, показываем предупреждение, но НЕ удаляем сессию автоматически
-                if (TempData["HasDraft"] as bool? == true)
+                // Проверяем наличие черновика в сессии
+                bool draftExists = _sessionService.SessionExists(userId);
+
+                if (draftExists)
                 {
-                    TempData["Warning"] = $"У вас есть незавершённый черновик олимпиады \"{TempData["DraftTitle"]}\" с {TempData["DraftQuestionsCount"]} вопросами. Черновик сохранён в сессии.";
+                    var draft = await _sessionService.GetSessionAsync(userId);
+
+                    if (draft != null && draft.Questions.Any() && !string.IsNullOrEmpty(draft.Title))
+                    {
+                        // Сохраняем информацию о черновике в TempData
+                        TempData["HasDraft"] = true;
+                        TempData["DraftTitle"] = draft.Title;
+                        TempData["DraftQuestionsCount"] = draft.Questions.Count;
+                        TempData["OlympiadIdForEdit"] = id.Value;
+
+                        // Проверяем, хочет ли пользователь загрузить черновик
+                        var loadDraft = Request.Query.ContainsKey("loadDraft") && Request.Query["loadDraft"] == "true";
+                        var discardDraft = Request.Query.ContainsKey("discardDraft") && Request.Query["discardDraft"] == "true";
+
+                        if (loadDraft)
+                        {
+                            // Пользователь выбрал загрузить черновик
+                            draft.IsEditMode = true;
+                            draft.OlympiadId = olympiad.OlympiadId;
+                            // Сохраняем черновик в сессию (он уже там есть)
+                            await _sessionService.SaveSessionAsync(userId, draft);
+                            TempData["Success"] = $"Черновик олимпиады \"{draft.Title}\" загружен. Можете продолжить редактирование.";
+                            return View(draft);
+                        }
+                        else if (discardDraft)
+                        {
+                            // Пользователь выбрал отменить черновик и начать с БД
+                            await _sessionService.DeleteSessionAsync(userId);
+                            // Сохраняем данные из БД в новую сессию
+                            await _sessionService.SaveSessionAsync(userId, olympiad);
+                            TempData["Success"] = "Черновик отменён. Загружена последняя версия из базы данных.";
+                            return View(olympiad);
+                        }
+
+                        // Если параметры не указаны - показываем страницу с уведомлением о черновике
+                        // и передаём оба варианта во ViewBag
+                        ViewBag.HasDraft = true;
+                        ViewBag.DraftInfo = new { draft.Title, QuestionsCount = draft.Questions.Count };
+                        ViewBag.OlympiadFromDb = olympiad;
+
+                        // Возвращаем представление с черновиком по умолчанию, но с уведомлением
+                        TempData["Warning"] = $"У вас есть незавершённый черновик олимпиады \"{draft.Title}\" с {draft.Questions.Count} вопросами. " +
+                            $"<a href='?loadDraft=true' class='alert-link'>Загрузить черновик</a> | " +
+                            $"<a href='?discardDraft=true' class='alert-link'>Начать с версии из БД</a>";
+
+                        draft.IsEditMode = true;
+                        draft.OlympiadId = olympiad.OlympiadId;
+                        return View(draft);
+                    }
+                    else
+                    {
+                        // Сессия есть, но она пустая или битая - создаём новую из БД
+                        await _sessionService.DeleteSessionAsync(userId);
+                        await _sessionService.SaveSessionAsync(userId, olympiad);
+                        return View(olympiad);
+                    }
                 }
                 else
                 {
-                    // Очищаем сессию только если нет черновика
-                    await _sessionService.DeleteSessionAsync(userId);
+                    // Черновика нет - создаём новую сессию с данными из БД
+                    await _sessionService.SaveSessionAsync(userId, olympiad);
+                    return View(olympiad);
                 }
-
-                return View(olympiad);
             }
             else
             {
                 // Режим создания - проверяем черновик в сессии
                 var draft = await _sessionService.GetSessionAsync(userId);
 
-                if (draft != null && !string.IsNullOrEmpty(draft.Title))
+                // Проверяем, хочет ли пользователь отменить черновик
+                var discardDraft = Request.Query.ContainsKey("discardDraft") && Request.Query["discardDraft"] == "true";
+
+                if (discardDraft)
                 {
-                    // Есть черновик - загружаем его
-                    return View(draft);
+                    // Пользователь хочет начать новый черновик
+                    await _sessionService.DeleteSessionAsync(userId);
+                    draft = null;
+                    TempData["Success"] = "Черновик отменён. Начат новый черновик.";
+                }
+
+                if (draft != null && !string.IsNullOrEmpty(draft.Title) && draft.Questions.Any())
+                {
+                    // Есть черновик - проверяем, хочет ли пользователь его загрузить
+                    var loadDraft = Request.Query.ContainsKey("loadDraft") && Request.Query["loadDraft"] == "true";
+
+                    if (loadDraft)
+                    {
+                        // Загружаем существующий черновик
+                        TempData["Success"] = $"Черновик олимпиады \"{draft.Title}\" загружен. Можете продолжить создание.";
+                        return View(draft);
+                    }
+                    else if (!discardDraft)
+                    {
+                        // Показываем уведомление о черновике с вариантами выбора
+                        TempData["Warning"] = $"У вас есть незавершённый черновик олимпиады \"{draft.Title}\" с {draft.Questions.Count} вопросами. " +
+                            $"<a href='?loadDraft=true' class='alert-link'>Продолжить работу с черновиком</a> | " +
+                            $"<a href='?discardDraft=true' class='alert-link'>Начать новый черновик</a>";
+                        return View(draft);
+                    }
                 }
 
                 // Новый черновик
@@ -103,6 +173,9 @@ namespace Olimpiadnic.Controllers
                     EventEnd = DateTime.Now.AddDays(28),
                     Questions = new List<QuestionEditorViewModel>()
                 };
+
+                // Сохраняем новый черновик в сессию
+                await _sessionService.SaveSessionAsync(userId, newModel);
 
                 return View(newModel);
             }

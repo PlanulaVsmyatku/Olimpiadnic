@@ -457,12 +457,13 @@ namespace Olimpiadnic.Controllers.Api
 
                 if (draft.IsEditMode && draft.OlympiadId > 0)
                 {
+                    olympiadId = draft.OlympiadId;
+
                     // Обновление существующей олимпиады
                     var success = await _olympiadRepository.UpdateOlympiadAsync(draft, userId);
                     if (!success)
                         return BadRequest(new { success = false, message = "Ошибка при обновлении олимпиады" });
 
-                    olympiadId = draft.OlympiadId;
                 }
                 else
                 {

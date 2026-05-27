@@ -252,12 +252,54 @@
         let isSaving = false;
         let nextTempId = 10000;
 
+        let initialQuestions = @Html.Raw(Json.Serialize(Model.Questions.Select(q => new
+        {
+                q.TempId,
+                q.QuestionId,
+                q.OrderNumber,
+                q.Description,
+                q.Type,
+                q.MaxScore,
+                q.ModelAnswer,
+                Options = q.Options.Select(o => new
+                {
+                        o.TempId,
+                        o.OptionId,
+                        o.OptionText,
+                        o.IsCorrect,
+                        o.SortOrder
+                }),
+                Attachments = q.Attachments.Select(a => new
+                {
+                        a.TempId,
+                        a.AttachmentId,
+                        a.ImageUrl,
+                        a.SortOrder
+                }),
+                ShortTitle = q.ShortTitle
+        })));
+        let initialHasQuestions = @(Model.Questions.Any() ? "true" : "false");
+
         // DOM элементы
         const questionsContainer = document.getElementById('questionsContainer');
         const questionsNavList = document.getElementById('questionsNavList');
         const questionsCountSpan = document.getElementById('questionsCount');
         const saveIndicator = document.getElementById('saveIndicator');
         const loadingOverlay = document.getElementById('loadingOverlay');
+
+        // Обработка выбора черновика
+        document.addEventListener('DOMContentLoaded', function() {
+            // Если есть warning с ссылками, они уже работают как обычные ссылки
+            // Дополнительно можно добавить обработку через confirm
+            const warningElement = document.querySelector('.alert-warning');
+            if (warningElement && warningElement.innerHTML.includes('Черновик')) {
+                // Можно добавить дополнительные стили для ссылок в уведомлении
+                const links = warningElement.querySelectorAll('a');
+                links.forEach(link => {
+                    link.classList.add('text-decoration-underline', 'fw-bold');
+                });
+            }
+        });
 
         // Показать/скрыть загрузку
         function showLoading() {
@@ -319,15 +361,15 @@
             }
         }
 
-        // Загрузка черновика
+        // Загрузка черновика или данных из модели
         async function loadDraft() {
             showLoading();
             try {
                 const response = await fetch('/api/editor/session');
                 const data = await response.json();
 
-                if (data.success && data.hasSession) {
-                    // Заполняем основную информацию
+                if (data.success && data.hasSession && data.questions && data.questions.length > 0) {
+                    // Есть черновик в сессии - загружаем его
                     document.getElementById('Title').value = data.olympiad.title || '';
                     document.getElementById('Description').value = data.olympiad.description || '';
                     document.getElementById('Credentials').value = data.olympiad.credentials || '';
@@ -337,21 +379,32 @@
                     document.getElementById('EventStart').value = data.olympiad.eventStart;
                     document.getElementById('EventEnd').value = data.olympiad.eventEnd;
 
-                    // Загружаем вопросы
-                    if (data.questions && data.questions.length > 0) {
-                        currentQuestions = data.questions;
-                        currentQuestionIndex = data.currentQuestionIndex || 0;
-                        renderQuestions();
-                        renderNavigation();
-                    } else {
-                        showEmptyState();
-                    }
-                } else {
+                    currentQuestions = data.questions;
+                    currentQuestionIndex = data.currentQuestionIndex || 0;
+                    renderQuestions();
+                    renderNavigation();
+                }
+                else if (initialHasQuestions) {
+                    // Нет черновика, но есть вопросы из модели (режим редактирования)
+                    currentQuestions = initialQuestions;
+                    currentQuestionIndex = 0;
+                    renderQuestions();
+                    renderNavigation();
+                }
+                else {
                     showEmptyState();
                 }
             } catch (error) {
                 console.error('Error loading draft:', error);
-                showEmptyState();
+                // Если ошибка при загрузке черновика, но есть данные из модели
+                if (initialHasQuestions) {
+                    currentQuestions = initialQuestions;
+                    currentQuestionIndex = 0;
+                    renderQuestions();
+                    renderNavigation();
+                } else {
+                    showEmptyState();
+                }
             } finally {
                 hideLoading();
             }
@@ -394,6 +447,10 @@
             const isAuto = question.type && question.type.startsWith('auto');
             const displayStyle = isActive ? 'block' : 'none';
 
+            // Проверяем, что options и attachments существуют
+            const options = question.options || [];
+            const attachments = question.attachments || [];
+
             return `
                 <div class="question-card" data-question-index="${index}" style="display: ${displayStyle}">
                     <div class="question-header">
@@ -431,7 +488,7 @@
                     <div class="auto-fields" style="display: ${isAuto ? 'block' : 'none'}">
                         <label class="form-label fw-semibold">Варианты ответов</label>
                         <div class="options-container" data-question="${index}">
-                            ${renderOptions(question.options || [], index)}
+                            ${renderOptions(options, index)}
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addOption(${index})">
                             <i class="fas fa-plus me-1"></i> Добавить вариант

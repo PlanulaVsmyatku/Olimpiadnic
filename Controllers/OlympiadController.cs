@@ -65,24 +65,30 @@ namespace Olimpiadnic.Controllers
                 if (!string.IsNullOrEmpty(userId) && int.TryParse(userId, out int userIdInt))
                 {
                     // Получаем участника
-                    var participant = await _olympiadRepository.GetOrCreateParticipantAsync(id, userIdInt);
-                    isRegistered = participant.Status == "registered"; // если статус не registered, значит начал или завершил
+                    var participant = await _olympiadRepository.GetParticipantAsync(id, userIdInt);
 
-                    // Проверяем, завершил ли пользователь олимпиаду
-                    isCompleted = participant.Status == "completed";
-                    completedAt = participant.CompletedAt;
-
-                    // Если завершил, получаем его результат
-                    if (isCompleted)
+                    if (participant.isParticipantExists)
                     {
-                        var result = await _olympiadRepository.GetParticipantResultAsync(participant.ParticipantId);
-                        MaxScore = await _olympiadRepository.GetParticipantResultsForDisplayAsync(participant.ParticipantId);
-                        userTotalScore = result?.TotalScore;
-                    }
-                }
-            }
+                        isRegistered = participant.Item2.Status == "registered";
+                        isCompleted = participant.Item2.Status == "completed";
 
-            
+                        // Проверяем, завершил ли пользователь олимпиаду
+                        completedAt = participant.Item2.CompletedAt;
+
+                        // Если завершил, получаем его результат
+                        if (isCompleted)
+                        {
+                            var result = await _olympiadRepository.GetParticipantResultAsync(participant.Item2.ParticipantId);
+                            MaxScore = await _olympiadRepository.GetParticipantResultsForDisplayAsync(participant.Item2.ParticipantId);
+                            userTotalScore = result?.TotalScore;
+                        }
+
+                    }
+
+
+                }
+
+            }
 
             // Определяем статус олимпиады
             var now = DateTime.Now;

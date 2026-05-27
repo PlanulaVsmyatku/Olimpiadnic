@@ -9,6 +9,7 @@ namespace Olimpiadnic.Services.Repos
     public class OlympiadRepository : IOlympiadRepository
     {
         private readonly AppDbContext _context;
+        private static TimeZoneInfo tz = TimeZoneInfo.FindSystemTimeZoneById("Asia/Novokuznetsk");
 
         public OlympiadRepository(AppDbContext context)
         {
@@ -34,7 +35,7 @@ namespace Olimpiadnic.Services.Repos
 
         public async Task<IEnumerable<Olympiad>> GetActiveOlympiadsAsync()
         {
-            var now = DateTime.UtcNow;
+            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
 
             var activeOlympiads = await _context.Olympiads
                 .Where(o => o.EventEnd >= now)
@@ -49,7 +50,7 @@ namespace Olimpiadnic.Services.Repos
             int pageNumber,
             int pageSize = 12)
         {
-            var now = DateTime.UtcNow;
+            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
 
             // Базовый запрос - только активные олимпиады (не завершённые)
             var query = _context.Olympiads
@@ -152,7 +153,7 @@ namespace Olimpiadnic.Services.Repos
         // Вспомогательный метод для определения статуса олимпиады
         private static string GetStatusForOlympiadStatic(DateTime eventStart, DateTime eventEnd, DateTime registOpen, DateTime registClosed)
         {
-            var now = DateTime.UtcNow;
+            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
 
             if (now >= registOpen && now <= registClosed && eventEnd >= now)
                 return "Регистрация открыта";
@@ -649,6 +650,22 @@ namespace Olimpiadnic.Services.Repos
             }
 
             return participant;
+        }
+
+        public async Task<(bool isParticipantExists, OlympiadParticipant?)> GetParticipantAsync(int olympiadId, int userId)
+        {
+            var participant = await _context.OlympiadParticipants
+                .FirstOrDefaultAsync(p => p.OlympId == olympiadId && p.UserId == userId);
+
+            if(participant == null)
+            {
+                return (false, null);
+            }
+            else
+            {
+                return (true, participant);
+            }
+
         }
 
         public async Task<List<QuestionAttachment>> GetQuestionAttachmentsAsync(int questionId)
